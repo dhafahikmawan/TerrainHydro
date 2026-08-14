@@ -1,4 +1,5 @@
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
+import { generateTiled } from "../tha/raster-analysis";
 
 /**
  * Demonstration of the GeoLibre right-sidebar panel host API.
@@ -17,24 +18,191 @@ import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
 
 /** Stable id for this plugin's right panel. Replace with your own. */
 export const RIGHT_PANEL_ID = "geolibre-plugin-template-workbench";
+let _app : GeoLibreAppAPI;
 
-function drawAnalysisMethodOption(method : string){
-  const methodOption = document.createElement("option");
-  methodOption.className = "geoprocessing-method-option";
-  methodOption.value = method;
-  methodOption.textContent = method;
-  return methodOption;
+
+function createBandOptions(num : number, mode : boolean){
+  const tcs : string[] = [];
+  for(let i = 0; i<num; i++){
+    let tc = String(i+1);
+    if(mode) tc = "Band " + (i+1);
+    tcs.push(tc);
+  }
+  return tcs;
 }
 
-function drawAnalysisMethods(dropdown : HTMLElement){
-  dropdown.appendChild(drawAnalysisMethodOption("Raster Analysis"));
-  dropdown.appendChild(drawAnalysisMethodOption("Network Analysis"));
-  dropdown.appendChild(drawAnalysisMethodOption("Analisis Medan & Hidrologi"));
+function drawAnalysisMethods(dropdown : HTMLElement, methods : string[], textContents? : string[]){
+  methods.forEach((method, index) => {
+    const methodOption = document.createElement("option");
+    methodOption.className = "geoprocessing-method-option";
+    methodOption.value = method;
+    if(!textContents || index >= textContents.length){
+      methodOption.textContent = method;
+    }else{
+      methodOption.textContent = textContents[index];
+    }
+    
+    dropdown.appendChild(methodOption);
+  });
 }
 
 
 function loadMethodForm(wrapper: HTMLElement, method : string){
+  removeAllChildElements(wrapper);
+  ///Base Forms
+  if(method === "Raster Analysis"){
+    const methodFunctionSelect = document.createElement("select");
+    const methodFunctionPlaceholder = document.createElement("select");
+    methodFunctionPlaceholder.value = "";
+    methodFunctionPlaceholder.textContent = "Select Raster Analysis Function";
+    methodFunctionSelect.appendChild(methodFunctionPlaceholder);
+    wrapper.appendChild(methodFunctionSelect);
+    const methodFunctionOptions = ["Slope", "NDVI", "NDSI"];
+    const raMethodForm = document.createElement("div");
+    wrapper.appendChild(raMethodForm);
+    drawAnalysisMethods(methodFunctionSelect, methodFunctionOptions);
+    methodFunctionSelect.addEventListener("change", () => {
+        loadMethodForm(raMethodForm, methodFunctionSelect.value);
+      })
+  }
+  else if(method === "Network Analysis"){
 
+  }
+  else if(method  === "Analisis Medan & Hidrologi"){
+    const methodFunctionSelect = document.createElement("select");
+    const methodFunctionPlaceholder = document.createElement("select");
+    methodFunctionPlaceholder.value = "";
+    methodFunctionPlaceholder.textContent = "Select Analisis Medan & Hidrologi Function";
+    methodFunctionSelect.appendChild(methodFunctionPlaceholder);
+    const methodFunctionOptions = ["Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
+    const raMethodForm = document.createElement("div");
+    drawAnalysisMethods(raMethodForm, methodFunctionOptions);
+    methodFunctionSelect.addEventListener("change", () => {
+        loadMethodForm(raMethodForm, methodFunctionSelect.value);
+      })
+  }
+  //Raster Analysis Forms
+  else if(method === "Slope"){
+    const fileInputLabel = document.createElement("h1");
+    fileInputLabel.textContent = "DEM Raster";
+    wrapper.appendChild(fileInputLabel);
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".tiff, .tif";
+    fileInput.className ="spatio-file-input";
+    wrapper.appendChild(fileInput);
+    const processingButton = document.createElement("button");
+    processingButton.type = "button";
+    processingButton.className = "spatio-action-button";
+    processingButton.textContent = "Generate Slope";
+    wrapper.appendChild(processingButton);
+    processingButton.addEventListener("click", async()=>{
+      const file = fileInput.files?.[0];
+      if(file){
+        const slopeRasterBlob = await generateTiled(file);
+        if(_app.addCogLayer){
+          _app.addCogLayer("Tiled Raster", URL.createObjectURL(slopeRasterBlob));
+        }else{
+          console.log("The app doesn't support the api")
+        }
+        
+      }
+    })
+
+
+
+  }
+  // (nir-red)/(nir+red)
+  else if(method === "NDVI"){
+    const fileInputALabel = document.createElement("h1");
+    fileInputALabel.textContent = "NIR Raster";
+    wrapper.appendChild(fileInputALabel);
+    const fileInputA = document.createElement("input");
+    fileInputA.type = "file";
+    fileInputA.accept = ".tiff, .tif";
+    fileInputA.className ="spatio-file-input";
+    wrapper.appendChild(fileInputA);
+    const nirSelectLabel = document.createElement("h1");
+    nirSelectLabel.textContent = 'Select raster band for "NIR"';
+    wrapper.appendChild(nirSelectLabel)
+    const nirSelect = document.createElement("select");
+    wrapper.appendChild(nirSelect);
+    const fileInputBLabel = document.createElement("h1");
+    fileInputBLabel.textContent = "Red Raster";
+    wrapper.appendChild(fileInputBLabel);
+    const fileInputB = document.createElement("input");
+    fileInputB.type = "file";
+    fileInputB.accept = ".tiff, .tif";
+    fileInputB.className ="spatio-file-input";
+    wrapper.appendChild(fileInputB);
+    const redSelectLabel = document.createElement("h1");
+    redSelectLabel.textContent = 'Select raster band for "Red"';
+    wrapper.appendChild(redSelectLabel);
+    const redSelect = document.createElement("select");
+    wrapper.appendChild(redSelect);
+    fileInputA.addEventListener('change', () =>{
+      const bands = 3;
+      drawAnalysisMethods(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    })
+    fileInputB.addEventListener('change', ()=>{
+      const bands  = 3;
+      drawAnalysisMethods(redSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    })
+    
+    //update bands on file input changes
+
+  }
+  //(Green - SWIR)/(Green + SWIR)
+  else if(method === "NDSI"){
+    const fileInputALabel = document.createElement("h1");
+    fileInputALabel.textContent = "SWIR Raster";
+    wrapper.appendChild(fileInputALabel);
+    const fileInputA = document.createElement("input");
+    fileInputA.type = "file";
+    fileInputA.accept = ".tiff, .tif";
+    fileInputA.className ="spatio-file-input";
+    wrapper.appendChild(fileInputA);
+    const swirSelectLabel = document.createElement("h1");
+    swirSelectLabel.textContent = 'Select raster band for "SWIR"';
+    wrapper.appendChild(swirSelectLabel)
+    const swirSelect = document.createElement("select");
+    wrapper.appendChild(swirSelect);
+    const fileInputBLabel = document.createElement("h1");
+    fileInputBLabel.textContent = "Green Raster";
+    wrapper.appendChild(fileInputBLabel);
+    const fileInputB = document.createElement("input");
+    fileInputB.type = "file";
+    fileInputB.accept = ".tiff, .tif";
+    fileInputB.className ="spatio-file-input";
+    wrapper.appendChild(fileInputB);
+    const greenSelectLabel = document.createElement("h1");
+    greenSelectLabel.textContent = 'Select raster band for "Green"';
+    wrapper.appendChild(greenSelectLabel);
+    const greenSelect = document.createElement("select");
+    wrapper.appendChild(greenSelect);
+    fileInputA.addEventListener('change', () =>{
+      const bands = 3;
+      drawAnalysisMethods(swirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    })
+    fileInputB.addEventListener('change', ()=>{
+      const bands  = 3;
+      drawAnalysisMethods(greenSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    })
+  }
+  else if(method === "Hazard Vulnerability Modeling"){
+
+  }
+  else if(method ==="Hazard Resistance Analysis"){
+
+  }
+}
+
+function removeAllChildElements(parent:  HTMLElement){
+  if(!parent) return;
+
+  while(parent.firstChild){
+    parent.removeChild(parent.firstChild);
+  }
 }
 
 /**
@@ -47,6 +215,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
   app: GeoLibreAppAPI<TControl>,
 ): (() => void) | null {
+  _app = app as GeoLibreAppAPI;
   // Right panels are an optional host capability; degrade gracefully when the
   // host (or standalone usage) does not provide them.
   if (!app.registerRightPanel) return null;
@@ -72,7 +241,12 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       methodPlaceholder.textContent = "Select Geoprocessing function";
       methodPlaceholder.className = "geoprocessing-method-option";
       method.appendChild(methodPlaceholder);
-      drawAnalysisMethods(method);
+      const methodOptions = [
+        "Raster Analysis",
+        "Network Analysis",
+        "Analisis Medan & Hidrologi",
+      ]
+      drawAnalysisMethods(method, methodOptions);
 
       //Method Form Container
       const methodFormContainer = document.createElement("div");

@@ -55,6 +55,11 @@ export default defineConfig({
       external: [],
       output: {
         assetFileNames: () => "style.css",
+        // GeoLibre loads the plugin entry point from a non-hierarchical URL
+        // (blob / data URI), so relative chunk imports like "./globals-xxx.js"
+        // cannot be resolved.  inlineDynamicImports merges all chunks into a
+        // single index.js, eliminating every relative import.
+        inlineDynamicImports: true,
       },
     },
     cssCodeSplit: false,
