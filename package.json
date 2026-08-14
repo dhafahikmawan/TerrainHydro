@@ -107,6 +107,9 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
-    "geotiff": "^3.0.5"
+    "@turf/turf": "^7.4.0",
+    "geotiff": "^3.0.5",
+    "ngraph.graph": "^20.1.2",
+    "ngraph.path": "^1.6.1"
   }
 }

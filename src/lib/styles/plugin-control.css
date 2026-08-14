@@ -370,3 +370,438 @@
   margin: 0;
   opacity: 0.85;
 }
+
+/* ==========================================================================
+   Network Analysis Panel
+   Scoped to .network-analysis-panel to prevent host style leakage.
+   ========================================================================== */
+
+.network-analysis-panel {
+  /* Local design tokens — light mode defaults */
+  --na-bg: #ffffff;
+  --na-bg-elevated: #f8fafc;
+  --na-bg-card: #f1f5f9;
+  --na-border: #e2e8f0;
+  --na-border-focus: #4a90d9;
+  --na-text: #1e293b;
+  --na-text-muted: #64748b;
+  --na-label-color: #475569;
+  --na-accent: #4a90d9;
+  --na-accent-hover: #3a7bc8;
+  --na-accent-ring: rgba(74, 144, 217, 0.2);
+  --na-accent-light: rgba(74, 144, 217, 0.1);
+  --na-success: #16a34a;
+  --na-error: #dc2626;
+  --na-error-bg: rgba(220, 38, 38, 0.08);
+  --na-success-bg: rgba(22, 163, 74, 0.08);
+  --na-input-bg: #ffffff;
+  --na-input-border: #cbd5e1;
+  --na-input-text: #1e293b;
+  --na-pick-active-bg: rgba(74, 144, 217, 0.15);
+  --na-pick-active-border: #4a90d9;
+  --na-pick-active-color: #1d4ed8;
+  --na-btn-disabled-bg: #94a3b8;
+  --na-card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --na-radius: 6px;
+  --na-radius-sm: 4px;
+  --na-transition: 0.15s ease;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--na-text);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Dark mode override */
+@media (prefers-color-scheme: dark) {
+  .network-analysis-panel {
+    --na-bg: #0f172a;
+    --na-bg-elevated: #1e293b;
+    --na-bg-card: #1e293b;
+    --na-border: #334155;
+    --na-border-focus: #60a5fa;
+    --na-text: #f1f5f9;
+    --na-text-muted: #94a3b8;
+    --na-label-color: #cbd5e1;
+    --na-accent: #60a5fa;
+    --na-accent-hover: #93c5fd;
+    --na-accent-ring: rgba(96, 165, 250, 0.25);
+    --na-accent-light: rgba(96, 165, 250, 0.1);
+    --na-success: #4ade80;
+    --na-error: #f87171;
+    --na-error-bg: rgba(248, 113, 113, 0.1);
+    --na-success-bg: rgba(74, 222, 128, 0.1);
+    --na-input-bg: #0f172a;
+    --na-input-border: #475569;
+    --na-input-text: #f1f5f9;
+    --na-pick-active-bg: rgba(96, 165, 250, 0.15);
+    --na-pick-active-border: #60a5fa;
+    --na-pick-active-color: #93c5fd;
+    --na-btn-disabled-bg: #475569;
+    --na-card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+
+/* Sections */
+.na-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.na-section-title {
+  margin: 0 0 0.25rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--na-text-muted);
+  border-bottom: 1px solid var(--na-border);
+  padding-bottom: 0.375rem;
+}
+
+/* Form rows */
+.na-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.na-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--na-label-color);
+  display: block;
+}
+
+.na-sublabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--na-text-muted);
+  margin: 0.25rem 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Inputs */
+.na-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.625rem;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--na-input-text);
+  background: var(--na-input-bg);
+  border: 1px solid var(--na-input-border);
+  border-radius: var(--na-radius-sm);
+  outline: none;
+  transition: border-color var(--na-transition), box-shadow var(--na-transition);
+}
+
+.na-input:focus {
+  border-color: var(--na-border-focus);
+  box-shadow: 0 0 0 3px var(--na-accent-ring);
+}
+
+.na-input:read-only {
+  background: var(--na-bg-card);
+  cursor: default;
+}
+
+.na-input--small {
+  max-width: 90px;
+}
+
+.na-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.na-file-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.na-file-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.na-file-input {
+  padding: 0.3rem 0.5rem;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.na-file-status {
+  font-size: 11px;
+  color: var(--na-text-muted);
+  padding-left: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Coordinate pick row */
+.na-coord-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.na-coord-row .na-label {
+  flex: 0 0 70px;
+  margin: 0;
+}
+
+.na-coord-input {
+  flex: 1 1 auto;
+  font-size: 12px;
+}
+
+/* Pick on map button */
+.na-pick-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--na-accent);
+  background: var(--na-accent-light);
+  border: 1px solid var(--na-accent);
+  border-radius: var(--na-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--na-transition), color var(--na-transition), border-color var(--na-transition), box-shadow var(--na-transition);
+}
+
+.na-pick-btn:hover {
+  background: var(--na-accent);
+  color: #fff;
+}
+
+.na-pick-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--na-accent-ring);
+}
+
+/* Active/picking state — pulsing highlight */
+.na-pick-btn--active {
+  background: var(--na-pick-active-bg);
+  border-color: var(--na-pick-active-border);
+  color: var(--na-pick-active-color);
+  animation: na-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes na-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--na-accent-ring); }
+  50% { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* Layer list */
+.na-layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.na-layer-card {
+  border: 1px solid var(--na-border);
+  border-radius: var(--na-radius);
+  padding: 0.5rem 0.75rem;
+  background: var(--na-bg-card);
+  box-shadow: var(--na-card-shadow);
+  transition: border-color var(--na-transition), box-shadow var(--na-transition);
+}
+
+.na-layer-card:hover {
+  border-color: var(--na-accent);
+  box-shadow: 0 0 0 2px var(--na-accent-ring);
+}
+
+.na-check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.na-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: var(--na-accent);
+  flex-shrink: 0;
+}
+
+.na-check-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--na-text);
+  cursor: pointer;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Layer sub-form (shown when checkbox is checked) */
+.na-layer-subform {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--na-border);
+}
+
+/* Radio group */
+.na-radio-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.na-radio-row .na-label {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.na-radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.na-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 13px;
+  color: var(--na-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.na-radio {
+  accent-color: var(--na-accent);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+/* Actions section */
+.na-actions {
+  gap: 0.5rem;
+  border-top: 1px solid var(--na-border);
+  padding-top: 0.75rem;
+  margin-top: 0.125rem;
+}
+
+/* Buttons */
+.na-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.25rem;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: var(--na-radius-sm);
+  cursor: pointer;
+  transition: background var(--na-transition), transform 0.1s ease, box-shadow var(--na-transition);
+  width: 100%;
+}
+
+.na-btn--primary {
+  background: var(--na-accent);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(74, 144, 217, 0.3);
+}
+
+.na-btn--primary:hover:not(:disabled) {
+  background: var(--na-accent-hover);
+  box-shadow: 0 2px 8px rgba(74, 144, 217, 0.4);
+  transform: translateY(-1px);
+}
+
+.na-btn--primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.na-btn--primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--na-accent-ring);
+}
+
+.na-btn--primary:disabled {
+  background: var(--na-btn-disabled-bg);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Secondary button (e.g., Download Route) */
+.na-btn--secondary {
+  background: transparent;
+  color: var(--na-accent);
+  border: 1px solid var(--na-accent);
+  box-shadow: none;
+}
+
+.na-btn--secondary:hover:not(:disabled) {
+  background: var(--na-accent-light);
+  transform: translateY(-1px);
+}
+
+.na-btn--secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.na-btn--secondary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--na-accent-ring);
+}
+
+/* Status field */
+.na-status {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--na-text-muted);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--na-radius-sm);
+  background: transparent;
+  min-height: 1.5rem;
+  transition: background var(--na-transition), color var(--na-transition);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.na-status:empty {
+  display: none;
+}
+
+.na-status--error {
+  color: var(--na-error);
+  background: var(--na-error-bg);
+}
+
+.na-status--success {
+  color: var(--na-success);
+  background: var(--na-success-bg);
+}
+
+/* Route form flex direction */
+.na-route-form {
+  flex-direction: column;
+}

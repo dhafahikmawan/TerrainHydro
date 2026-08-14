@@ -199,6 +199,7 @@ export interface GeoLibreAppAPI<TControl extends GeoLibreControl = GeoLibreContr
    * (for example, the slot is occupied), in which case the plugin should treat
    * activation as failed.
    */
+  getMap?: () => import("maplibre-gl").Map | null;
   addGeoJsonLayer: (
     name: string,
     data: FeatureCollection,
