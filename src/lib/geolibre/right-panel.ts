@@ -164,6 +164,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const actionButton = document.createElement("button");
     actionButton.type = "button";
     actionButton.className = "spatio-action-button";
+    actionButton.textContent = "Generate NDVI";
     wrapper.appendChild(actionButton);
     actionButton.addEventListener('click', async () => {
       if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(redSelect.value) > 0){
@@ -223,6 +224,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const actionButton = document.createElement("button");
     actionButton.type = "button";
     actionButton.className = "spatio-action-button";
+    actionButton.textContent = "Generate NDWI";
     wrapper.appendChild(actionButton);
     actionButton.addEventListener('click', async () => {
       if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(greenSelect.value) > 0){

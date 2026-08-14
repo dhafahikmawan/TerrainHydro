@@ -10,7 +10,11 @@ import {
  * @param input - The input DEM GeoTIFF file
  * @returns A Promise resolving to a Blob containing the single-band slope raster
  */
-export async function generateSlope(input: File, unit: string, zFactor: number): Promise<Blob> {
+export async function generateSlope(
+  input: File,
+  unit: string = 'Degrees',
+  zFactor: number = 1.0
+): Promise<Blob> {
   const raster = await readRasterFromFile(input);
   const { width, height, data, geotransform, crsCode, noDataValue, bandCount } = raster;
 
@@ -20,6 +24,9 @@ export async function generateSlope(input: File, unit: string, zFactor: number):
 
   const cx = cellsize_x === 0 ? 1.0 : cellsize_x;
   const cy = cellsize_y === 0 ? 1.0 : cellsize_y;
+
+  const actualZFactor = typeof zFactor === 'number' && !Number.isNaN(zFactor) ? zFactor : 1.0;
+  const actualUnit = unit || 'Degrees';
 
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
 
@@ -51,19 +58,28 @@ export async function generateSlope(input: File, unit: string, zFactor: number):
         Number.isNaN(d) || Number.isNaN(e) || Number.isNaN(f) ||
         Number.isNaN(g) || Number.isNaN(h) || Number.isNaN(i)
       ) {
-        outputData[row * width + col] = -9999;
+        outputData[row * width + col] = noDataValue;
         continue;
       }
 
-      // Horn's gradients
-      const dz_dx = ((cVal + 2 * f + i) - (a + 2 * d + g)) / (8 * cx);
-      const dz_dy = ((g + 2 * h + i) - (a + 2 * b + cVal)) / (8 * cy);
+      // Horn's gradients with Z-factor applied
+      const dz_dx = (((cVal + 2 * f + i) - (a + 2 * d + g)) / (8 * cx)) * actualZFactor;
+      const dz_dy = (((g + 2 * h + i) - (a + 2 * b + cVal)) / (8 * cy)) * actualZFactor;
 
       const rise_run = Math.sqrt(dz_dx * dz_dx + dz_dy * dz_dy);
-      const slope_rad = Math.atan(rise_run);
-      const slope_deg = slope_rad * (180 / Math.PI);
+      
+      let val = 0;
+      if (actualUnit === 'Percent') {
+        val = rise_run * 100;
+      } else if (actualUnit === 'Ratio') {
+        val = rise_run;
+      } else {
+        // default/Degrees
+        const slope_rad = Math.atan(rise_run);
+        val = slope_rad * (180 / Math.PI);
+      }
 
-      outputData[row * width + col] = slope_deg;
+      outputData[row * width + col] = val;
     }
   }
 
@@ -124,13 +140,13 @@ export async function generateNDVI(
       nirVal === nirNoData || redVal === redNoData ||
       Number.isNaN(nirVal) || Number.isNaN(redVal)
     ) {
-      outputData[i] = -9999;
+      outputData[i] = Number.NaN;
       continue;
     }
 
     const denom = nirVal + redVal;
     if (denom === 0) {
-      outputData[i] = -9999;
+      outputData[i] = Number.NaN;
     } else {
       outputData[i] = (nirVal - redVal) / denom;
     }
@@ -189,13 +205,13 @@ export async function generateNDWI(
       nirVal === nirNoData || greenVal === greenNoData ||
       Number.isNaN(nirVal) || Number.isNaN(greenVal)
     ) {
-      outputData[i] = -9999;
+      outputData[i] = Number.NaN;
       continue;
     }
 
     const denom = greenVal + nirVal;
     if (denom === 0) {
-      outputData[i] = -9999;
+      outputData[i] = Number.NaN;
     } else {
       outputData[i] = (greenVal - nirVal) / denom;
     }

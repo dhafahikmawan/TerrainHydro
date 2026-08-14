@@ -66,6 +66,64 @@ describe('Raster Analysis', () => {
       // The center pixel should be -9999
       expect(slopeRaster.data[4]).toBe(-9999);
     });
+
+    it('calculates slope in Percent', async () => {
+      const width = 3;
+      const height = 3;
+      const data = new Float32Array([
+        0, 10, 20,
+        0, 10, 20,
+        0, 10, 20
+      ]);
+      const geotransform: [number, number, number, number, number, number] = [0, 10, 0, 100, 0, -10];
+      const buffer = writeFloat32TiledGeoTIFF(width, height, data, geotransform, 3857, 1);
+      const input = new File([buffer], 'dem.tif', { type: 'image/tiff' });
+
+      const slopeBlob = await generateSlope(input, 'Percent');
+      const slopeFile = new File([slopeBlob], 'slope.tif', { type: 'image/tiff' });
+      const slopeRaster = await readRasterFromFile(slopeFile);
+
+      expect(slopeRaster.data[4]).toBeCloseTo(100.0, 2);
+    });
+
+    it('calculates slope in Ratio', async () => {
+      const width = 3;
+      const height = 3;
+      const data = new Float32Array([
+        0, 10, 20,
+        0, 10, 20,
+        0, 10, 20
+      ]);
+      const geotransform: [number, number, number, number, number, number] = [0, 10, 0, 100, 0, -10];
+      const buffer = writeFloat32TiledGeoTIFF(width, height, data, geotransform, 3857, 1);
+      const input = new File([buffer], 'dem.tif', { type: 'image/tiff' });
+
+      const slopeBlob = await generateSlope(input, 'Ratio');
+      const slopeFile = new File([slopeBlob], 'slope.tif', { type: 'image/tiff' });
+      const slopeRaster = await readRasterFromFile(slopeFile);
+
+      expect(slopeRaster.data[4]).toBeCloseTo(1.0, 4);
+    });
+
+    it('applies Z-factor correctly', async () => {
+      const width = 3;
+      const height = 3;
+      const data = new Float32Array([
+        0, 10, 20,
+        0, 10, 20,
+        0, 10, 20
+      ]);
+      const geotransform: [number, number, number, number, number, number] = [0, 10, 0, 100, 0, -10];
+      const buffer = writeFloat32TiledGeoTIFF(width, height, data, geotransform, 3857, 1);
+      const input = new File([buffer], 'dem.tif', { type: 'image/tiff' });
+
+      // Z-factor of 2.0: rise_run = 2.0, atan(2.0) = ~63.43 degrees
+      const slopeBlob = await generateSlope(input, 'Degrees', 2.0);
+      const slopeFile = new File([slopeBlob], 'slope.tif', { type: 'image/tiff' });
+      const slopeRaster = await readRasterFromFile(slopeFile);
+
+      expect(slopeRaster.data[4]).toBeCloseTo(63.43, 2);
+    });
   });
 
   describe('NDVI', () => {
