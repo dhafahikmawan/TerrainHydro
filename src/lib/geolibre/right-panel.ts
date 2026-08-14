@@ -1,5 +1,6 @@
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
-import { generateTiled } from "../tha/raster-analysis";
+import { generateTiled, generateNDVI, generateNDWI, generateSlope } from "../tha/raster-analysis";
+import { getGeoTIFFBandCount } from "../utils/geotiff-processor";
 
 /**
  * Demonstration of the GeoLibre right-sidebar panel host API.
@@ -57,7 +58,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     methodFunctionPlaceholder.textContent = "Select Raster Analysis Function";
     methodFunctionSelect.appendChild(methodFunctionPlaceholder);
     wrapper.appendChild(methodFunctionSelect);
-    const methodFunctionOptions = ["Slope", "NDVI", "NDSI"];
+    const methodFunctionOptions = ["Slope", "NDVI", "NDWI"];
     const raMethodForm = document.createElement("div");
     wrapper.appendChild(raMethodForm);
     drawAnalysisMethods(methodFunctionSelect, methodFunctionOptions);
@@ -91,6 +92,18 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     fileInput.accept = ".tiff, .tif";
     fileInput.className ="spatio-file-input";
     wrapper.appendChild(fileInput);
+    const unitSelectLabel = document.createElement("h1");
+    unitSelectLabel.textContent = "Select Slope Unit";
+    const unitSelect = document.createElement("select");
+    drawAnalysisMethods(unitSelect, ["Degrees", "Percent", "Ratio"]);
+    const slopeZFactor = document.createElement("input");
+    slopeZFactor.type = "number";
+    slopeZFactor.min = "0";
+    slopeZFactor.value = "1";
+    wrapper.appendChild(unitSelectLabel);
+    wrapper.appendChild(unitSelect);
+    wrapper.appendChild(slopeZFactor);
+
     const processingButton = document.createElement("button");
     processingButton.type = "button";
     processingButton.className = "spatio-action-button";
@@ -99,9 +112,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     processingButton.addEventListener("click", async()=>{
       const file = fileInput.files?.[0];
       if(file){
-        const slopeRasterBlob = await generateTiled(file);
+        const slopeRasterBlob = await generateSlope(file, unitSelect.value, Number(slopeZFactor.value));
         if(_app.addCogLayer){
-          _app.addCogLayer("Tiled Raster", URL.createObjectURL(slopeRasterBlob));
+          _app.addCogLayer("Slope Raster", URL.createObjectURL(slopeRasterBlob));
         }else{
           console.log("The app doesn't support the api")
         }
@@ -140,33 +153,52 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(redSelectLabel);
     const redSelect = document.createElement("select");
     wrapper.appendChild(redSelect);
-    fileInputA.addEventListener('change', () =>{
-      const bands = 3;
+    fileInputA.addEventListener('change', async () =>{
+      const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
       drawAnalysisMethods(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
-    })
-    fileInputB.addEventListener('change', ()=>{
-      const bands  = 3;
+    });
+    fileInputB.addEventListener('change', async ()=>{
+      const bands  = fileInputB.files ? await getGeoTIFFBandCount(fileInputB.files?.[0]) : 0;
       drawAnalysisMethods(redSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    });
+    const actionButton = document.createElement("button");
+    actionButton.type = "button";
+    actionButton.className = "spatio-action-button";
+    wrapper.appendChild(actionButton);
+    actionButton.addEventListener('click', async () => {
+      if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(redSelect.value) > 0){
+        const ndviRasterBlob = await generateNDVI(fileInputA.files?.[0], Number(nirSelect.value), fileInputB.files?.[0], Number(redSelect.value));
+        if(_app.addCogLayer){
+            _app.addCogLayer("NDVI Raster", URL.createObjectURL(ndviRasterBlob));
+          }else{
+            console.log("The app doesn't support the api")
+          }
+      }
+      else{
+        console.log("incomplete form");
+      }
+      
+
     })
     
     //update bands on file input changes
 
   }
-  //(Green - SWIR)/(Green + SWIR)
-  else if(method === "NDSI"){
+  //(Green - NIR)/(Green + NIR)
+  else if(method === "NDWI"){
     const fileInputALabel = document.createElement("h1");
-    fileInputALabel.textContent = "SWIR Raster";
+    fileInputALabel.textContent = "NIR Raster";
     wrapper.appendChild(fileInputALabel);
     const fileInputA = document.createElement("input");
     fileInputA.type = "file";
     fileInputA.accept = ".tiff, .tif";
     fileInputA.className ="spatio-file-input";
     wrapper.appendChild(fileInputA);
-    const swirSelectLabel = document.createElement("h1");
-    swirSelectLabel.textContent = 'Select raster band for "SWIR"';
-    wrapper.appendChild(swirSelectLabel)
-    const swirSelect = document.createElement("select");
-    wrapper.appendChild(swirSelect);
+    const nirSelectLabel = document.createElement("h1");
+    nirSelectLabel.textContent = 'Select raster band for "NIR"';
+    wrapper.appendChild(nirSelectLabel)
+    const nirSelect = document.createElement("select");
+    wrapper.appendChild(nirSelect);
     const fileInputBLabel = document.createElement("h1");
     fileInputBLabel.textContent = "Green Raster";
     wrapper.appendChild(fileInputBLabel);
@@ -180,13 +212,30 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(greenSelectLabel);
     const greenSelect = document.createElement("select");
     wrapper.appendChild(greenSelect);
-    fileInputA.addEventListener('change', () =>{
-      const bands = 3;
-      drawAnalysisMethods(swirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
-    })
-    fileInputB.addEventListener('change', ()=>{
-      const bands  = 3;
+    fileInputA.addEventListener('change', async () =>{
+      const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
+      drawAnalysisMethods(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    });
+    fileInputB.addEventListener('change', async ()=>{
+      const bands  = fileInputB.files ? await getGeoTIFFBandCount(fileInputB.files?.[0]) : 0;;
       drawAnalysisMethods(greenSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+    });
+    const actionButton = document.createElement("button");
+    actionButton.type = "button";
+    actionButton.className = "spatio-action-button";
+    wrapper.appendChild(actionButton);
+    actionButton.addEventListener('click', async () => {
+      if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(greenSelect.value) > 0){
+        const ndviRasterBlob = await generateNDWI(fileInputA.files?.[0], Number(nirSelect.value), fileInputB.files?.[0], Number(greenSelect.value));
+        if(_app.addCogLayer){
+            _app.addCogLayer("NDWI Raster", URL.createObjectURL(ndviRasterBlob));
+          }else{
+            console.log("The app doesn't support the api")
+          }
+      }
+      else{
+        console.log("incomplete form");
+      }
     })
   }
   else if(method === "Hazard Vulnerability Modeling"){
@@ -236,17 +285,26 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       //Method Select
       const method = document.createElement("select");
       method.className = "geoprocessing-method-select";
+      /*
       const methodPlaceholder = document.createElement("option");
       methodPlaceholder.value = "";
       methodPlaceholder.textContent = "Select Geoprocessing function";
       methodPlaceholder.className = "geoprocessing-method-option";
       method.appendChild(methodPlaceholder);
+      */
       const methodOptions = [
+        "", //placeholder
         "Raster Analysis",
         "Network Analysis",
         "Analisis Medan & Hidrologi",
       ]
-      drawAnalysisMethods(method, methodOptions);
+      const methodOptionsTextContents = [
+        "Select Geoprocessing function",  //placeholder
+        "Raster Analysis",
+        "Network Analysis",
+        "Analisis Medan & Hidrologi",
+      ]
+      drawAnalysisMethods(method,methodOptions, methodOptionsTextContents);
 
       //Method Form Container
       const methodFormContainer = document.createElement("div");

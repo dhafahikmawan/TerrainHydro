@@ -1,0 +1,3 @@
+### Geolibre Plugin - Geotiff Bands
+
+Currently, the plugin already succeeded in reading a geotiff and writing a tiled geotiff. That said, in the generateTiled result, if the input if a multi-band geotiff, it only returns a single-band geotiff. We need multi-band geotiffs to stay multi-band. We also need to add a function in /src/lib/utils/geotiff-processor.md  that will be exported for other files to get how many bands does a file have.

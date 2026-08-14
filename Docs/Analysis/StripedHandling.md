@@ -378,7 +378,25 @@ export function writeFloat32GeoTIFF(
 
 ---
 
-## 9. Porting Guide for Other Geolibre Plugins
+## 9. Coordinate System Handling Issues
+
+When dealing with GeoTIFF files, accurately extracting and writing spatial references is critical. If spatial references are misconfigured, resulting layers might render at coordinate `0,0` or fail to align with source layers on the map.
+
+### A. Geotransform and CRS Metadata Extraction
+When extracting the Coordinate Reference System (CRS) and geotransform metadata from an uploaded file using `geotiff.js`, one must not read properties directly from the `ImageFileDirectory` object (e.g., `fd['ModelPixelScale']`). The object does not expose these as direct properties, resulting in `undefined` values and causing fallbacks to default coordinates (e.g., origin `0,0` and CRS `3857`).
+
+**Solution**: Always use the provided accessor methods:
+1. `fd.getValue('ModelPixelScale')` and `fd.getValue('ModelTiepoint')` for geotransforms.
+2. `image.getGeoKeys()` for the CRS keys (`ProjectedCSTypeGeoKey` or `GeographicTypeGeoKey`).
+
+### B. Geographic CRS Robustness
+When constructing the TIFF headers for a geographic coordinate system (Tag 1024 / Tag 34735), it is incorrect to hardcode the check exclusively to EPSG 4326 (`crsCode === 4326`). Users may upload rasters in other geographic coordinate systems (like EPSG 4269).
+
+**Solution**: Generalize the geographic CRS verification to cover common geographic EPSG code ranges, such as `crsCode === 4326 || (crsCode >= 4000 && crsCode < 5000)`.
+
+---
+
+## 10. Porting Guide for Other Geolibre Plugins
 
 When adapting this conversion mechanism to other plugins, keep the following considerations in mind:
 

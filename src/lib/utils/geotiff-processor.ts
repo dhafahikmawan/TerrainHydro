@@ -10,6 +10,7 @@ export interface RasterSource {
   geotransform: [number, number, number, number, number, number];
   crsCode: number;
   noDataValue: number;
+  bandCount: number;
 }
 
 /**
@@ -26,7 +27,12 @@ export async function readRasterFromFile(file: File): Promise<RasterSource> {
     const width = image.getWidth();
     const height = image.getHeight();
 
-    // 2. Read the raster data array
+    // 2. Extract metadata tags using TIFF accessors to get band count
+    const fd = image.getFileDirectory();
+    // SamplesPerPixel (tag 277) tells us how many bands/samples per pixel
+    const bandCount = fd.hasTag(277) ? (fd.getValue(277) as number) : 1;
+
+    // 3. Read the raster data array with all bands (interleaved)
     const rasters = await image.readRasters({ interleave: true });
     // Coerce geotiff.js typed array wrapper to Float32Array
     const rawRaster = rasters as unknown as { [index: number]: number } & { length: number };
@@ -35,21 +41,18 @@ export async function readRasterFromFile(file: File): Promise<RasterSource> {
       elevation[i] = rawRaster[i];
     }
 
-    // 3. Extract metadata tags
-    const fd = image.getFileDirectory() as unknown as Record<string, unknown>;
-
     // NoData Value (GDAL_NODATA tag 42113)
-    const noDataValue = fd['GDAL_NODATA'] != null
-      ? parseFloat(String(fd['GDAL_NODATA']))
+    const noDataValue = fd.hasTag('GDAL_NODATA')
+      ? parseFloat(String(fd.getValue('GDAL_NODATA')))
       : -9999;
 
     // Spatial Geotransform (ModelPixelScale and ModelTiepoint tags)
-    const pixelScale = fd['ModelPixelScale'] as number[] | undefined;
-    const tiepoint = fd['ModelTiepoint'] as number[] | undefined;
-    const scaleX = pixelScale ? pixelScale[0] : 1.0;
-    const scaleY = pixelScale ? -pixelScale[1] : -1.0; // South-positive to negative scale
-    const originX = tiepoint ? tiepoint[3] : 0.0;
-    const originY = tiepoint ? tiepoint[4] : 0.0;
+    const pixelScale = fd.getValue('ModelPixelScale') as number[] | undefined;
+    const tiepoint = fd.getValue('ModelTiepoint') as number[] | undefined;
+    const scaleX = pixelScale && pixelScale[0] != null ? pixelScale[0] : 1.0;
+    const scaleY = pixelScale && pixelScale[1] != null ? -Math.abs(pixelScale[1]) : -1.0;
+    const originX = tiepoint && tiepoint[3] != null ? tiepoint[3] : 0.0;
+    const originY = tiepoint && tiepoint[4] != null ? tiepoint[4] : 0.0;
     const geotransform: [number, number, number, number, number, number] = [
       originX,
       scaleX,
@@ -59,18 +62,13 @@ export async function readRasterFromFile(file: File): Promise<RasterSource> {
       scaleY,
     ];
 
-    // 4. Extract EPSG code from GeoKeyDirectory (Tag 34735)
-    const geoKeys = fd['GeoKeyDirectory'] as number[] | undefined;
+    // 4. Extract EPSG code from GeoTIFF geo keys (Tag 34735)
+    const geoKeys = image.getGeoKeys();
     let crsCode = 3857; // Default fallback to Web Mercator
     if (geoKeys) {
-      const numKeys = geoKeys[3];
-      for (let i = 0; i < numKeys; i++) {
-        const keyId = geoKeys[4 + i * 4];
-        // 3072 = ProjectedCSTypeGeoKey, 2048 = GeographicTypeGeoKey
-        if (keyId === 3072 || keyId === 2048) {
-          crsCode = geoKeys[4 + i * 4 + 3];
-          break;
-        }
+      const projectedCrs = geoKeys.ProjectedCSTypeGeoKey ?? geoKeys.GeographicTypeGeoKey;
+      if (typeof projectedCrs === 'number') {
+        crsCode = projectedCrs;
       }
     }
 
@@ -81,6 +79,7 @@ export async function readRasterFromFile(file: File): Promise<RasterSource> {
       geotransform,
       crsCode,
       noDataValue,
+      bandCount,
     };
   } catch (error) {
     throw new Error(`Failed to read raster from file: ${(error as Error).message}`);
@@ -92,9 +91,10 @@ export async function readRasterFromFile(file: File): Promise<RasterSource> {
  *
  * @param width - Image width in pixels
  * @param height - Image height in pixels
- * @param data - Row-major Float32 pixel data
+ * @param data - Row-major Float32 pixel data (for multi-band: width * height * bandCount samples)
  * @param geotransform - [originX, scaleX, 0, originY, 0, scaleY]
  * @param crsCode - EPSG code (default 3857 for Web Mercator)
+ * @param bandCount - Number of bands in the raster (default 1)
  * @returns An ArrayBuffer containing the tiled GeoTIFF
  */
 export function writeFloat32TiledGeoTIFF(
@@ -103,6 +103,7 @@ export function writeFloat32TiledGeoTIFF(
   data: Float32Array,
   geotransform: [number, number, number, number, number, number],
   crsCode: number = 3857,
+  bandCount: number = 1,
 ): ArrayBuffer {
   const isGeographic = crsCode === 4326 || (crsCode >= 4000 && crsCode < 5000);
   const crsKey = isGeographic ? 2048 : 3072;
@@ -114,17 +115,32 @@ export function writeFloat32TiledGeoTIFF(
   const tilesDown = Math.ceil(height / TILE_H);
   const numTiles = tilesAcross * tilesDown;
 
+  // For multi-band TIFF, we keep BitsPerSample as a single value (applies to all bands)
+  // when all bands have the same bit depth
+  
   // Memory offsets layout calculations
   const ifdEntriesCount = 14;
-  const pixelScaleOffset = 184;
-  const tiepointOffset = pixelScaleOffset + 3 * 8; // 208
+  let currentOffset = 8 + 2 + ifdEntriesCount * 12 + 4; // After IFD header, entries, and terminator
+  
+  const pixelScaleOffset = currentOffset;
+  currentOffset += 3 * 8; // 3 doubles
+  
+  const tiepointOffset = currentOffset;
+  currentOffset += 6 * 8; // 6 doubles
+  
   const geokeysCount = 16;
-  const geokeysOffset = tiepointOffset + 6 * 8; // 256
-  const tileOffsetsOffset = geokeysOffset + geokeysCount * 2; // 288
-  const tileByteCountsOffset = tileOffsetsOffset + numTiles * 4;
-  const pixelDataOffset = Math.ceil((tileByteCountsOffset + numTiles * 4) / 8) * 8;
+  const geokeysOffset = currentOffset;
+  currentOffset += geokeysCount * 2; // geokeys
+  
+  const tileOffsetsOffset = currentOffset;
+  currentOffset += numTiles * 4;
+  
+  const tileByteCountsOffset = currentOffset;
+  currentOffset += numTiles * 4;
+  
+  const pixelDataOffset = Math.ceil(currentOffset / 8) * 8;
 
-  const singleTileBytes = TILE_W * TILE_H * 4; // Float32 = 4 bytes per sample
+  const singleTileBytes = TILE_W * TILE_H * 4 * bandCount; // Float32 = 4 bytes per sample, multiply by bandCount
   const totalSize = pixelDataOffset + numTiles * singleTileBytes;
 
   const buffer = new ArrayBuffer(totalSize);
@@ -152,14 +168,16 @@ export function writeFloat32TiledGeoTIFF(
   // IFD tags must be written in ascending numerical order!
   writeTag(256, 4, 1, width); // ImageWidth
   writeTag(257, 4, 1, height); // ImageLength
-  writeTag(258, 3, 1, 32); // BitsPerSample
+  // BitsPerSample: single value applies to all bands when they have same bit depth
+  writeTag(258, 3, 1, 32); // 32 bits per sample
   writeTag(259, 3, 1, 1); // Compression
   writeTag(262, 3, 1, 1); // PhotometricInterpretation
-  writeTag(277, 3, 1, 1); // SamplesPerPixel
+  writeTag(277, 3, 1, bandCount); // SamplesPerPixel
   writeTag(322, 4, 1, TILE_W); // TileWidth
   writeTag(323, 4, 1, TILE_H); // TileLength
   writeTag(324, 4, numTiles, numTiles === 1 ? pixelDataOffset : tileOffsetsOffset); // TileOffsets
   writeTag(325, 4, numTiles, numTiles === 1 ? singleTileBytes : tileByteCountsOffset); // TileByteCounts
+  // SampleFormat: single value applies to all bands (3 = IEEE Float)
   writeTag(339, 3, 1, 3); // SampleFormat (IEEE Float)
   writeTag(33550, 12, 3, pixelScaleOffset); // ModelPixelScaleTag
   writeTag(33922, 12, 6, tiepointOffset); // ModelTiepointTag
@@ -220,11 +238,11 @@ export function writeFloat32TiledGeoTIFF(
     }
   }
 
-  // 7. Write Pixel Data in Tile-Major layout
+  // 7. Write Pixel Data in Tile-Major layout (preserving multi-band interleaved format)
   const pixelFloatView = new Float32Array(
     buffer,
     pixelDataOffset,
-    numTiles * TILE_W * TILE_H
+    numTiles * TILE_W * TILE_H * bandCount
   );
   let destIdx = 0;
   for (let ty = 0; ty < tilesDown; ty++) {
@@ -234,11 +252,19 @@ export function writeFloat32TiledGeoTIFF(
         for (let x = 0; x < TILE_W; x++) {
           const imgX = tx * TILE_W + x;
           if (imgX < width && imgY < height) {
-            pixelFloatView[destIdx] = data[imgY * width + imgX];
+            // For multi-band data, preserve all bands per pixel (interleaved format)
+            const srcPixelIdx = (imgY * width + imgX) * bandCount;
+            for (let b = 0; b < bandCount; b++) {
+              pixelFloatView[destIdx] = data[srcPixelIdx + b];
+              destIdx++;
+            }
           } else {
-            pixelFloatView[destIdx] = 0.0; // padding for partial/edge tiles
+            // padding for partial/edge tiles
+            for (let b = 0; b < bandCount; b++) {
+              pixelFloatView[destIdx] = 0.0;
+              destIdx++;
+            }
           }
-          destIdx++;
         }
       }
     }
@@ -248,8 +274,29 @@ export function writeFloat32TiledGeoTIFF(
 }
 
 /**
+ * Retrieves the number of bands in a GeoTIFF file.
+ *
+ * @param file - The input GeoTIFF file
+ * @returns Promise resolving to the band count (defaults to 1 if metadata is unavailable)
+ */
+export async function getGeoTIFFBandCount(file: File): Promise<number> {
+  try {
+    const tiff = await fromBlob(file);
+    const image = await tiff.getImage();
+    const fd = image.getFileDirectory();
+    // SamplesPerPixel (tag 277) tells us how many bands/samples per pixel
+    const bandCount = fd.hasTag(277) ? (fd.getValue(277) as number) : 1;
+    return bandCount;
+  } catch (error) {
+    // Default to 1 band if metadata cannot be read
+    return 1;
+  }
+}
+
+/**
  * Generates a tiled GeoTIFF Blob from an input GeoTIFF file.
  * This is the main entry point for converting GeoTIFF to tiled format.
+ * Preserves multi-band data if the input is multi-band.
  *
  * @param input - The input GeoTIFF file
  * @returns A Promise resolving to a Blob containing the tiled GeoTIFF
@@ -261,7 +308,8 @@ export async function generateGeoTIFFBlobFromRaster(input: File): Promise<Blob> 
     raster.height,
     raster.data,
     raster.geotransform,
-    raster.crsCode
+    raster.crsCode,
+    raster.bandCount
   );
   return new Blob([buffer], { type: 'image/tiff' });
 }

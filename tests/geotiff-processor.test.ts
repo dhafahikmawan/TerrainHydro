@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { writeFloat32TiledGeoTIFF } from '../src/lib/utils/geotiff-processor';
+import { readRasterFromFile, writeFloat32TiledGeoTIFF, getGeoTIFFBandCount } from '../src/lib/utils/geotiff-processor';
 import { fromBlob } from 'geotiff';
 
 describe('writeFloat32TiledGeoTIFF', () => {
@@ -163,6 +163,26 @@ describe('writeFloat32TiledGeoTIFF', () => {
 
     expect(image.getWidth()).toBe(256);
     expect(image.getHeight()).toBe(257);
+  });
+
+  it('reads geotransform and CRS metadata using the correct TIFF accessors', async () => {
+    const width = 16;
+    const height = 12;
+    const data = new Float32Array(width * height).fill(7);
+    const geotransform: [number, number, number, number, number, number] = [123.45, 0.5, 0, 678.9, 0, -0.25];
+
+    const buffer = writeFloat32TiledGeoTIFF(width, height, data, geotransform, 4326);
+    const blob = new File([buffer], 'test.tif', { type: 'image/tiff' });
+
+    const raster = await readRasterFromFile(blob);
+
+    expect(raster.width).toBe(width);
+    expect(raster.height).toBe(height);
+    expect(raster.geotransform[0]).toBeCloseTo(123.45, 6);
+    expect(raster.geotransform[1]).toBeCloseTo(0.5, 6);
+    expect(raster.geotransform[3]).toBeCloseTo(678.9, 6);
+    expect(raster.geotransform[5]).toBeCloseTo(-0.25, 6);
+    expect(raster.crsCode).toBe(4326);
   });
 
   it('preserves CRS information for geographic CRS', async () => {
