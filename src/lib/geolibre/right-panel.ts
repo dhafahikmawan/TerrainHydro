@@ -1,9 +1,11 @@
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
-import type { FeatureCollection } from "geojson";
+import type { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
 import { generateNDVI, generateNDWI, generateSlope } from "../tha/raster-analysis";
 import { getGeoTIFFBandCount } from "../utils/geotiff-processor";
 import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
+import { createBufferedLayer, analyzeBufferZone } from "../tha/terrain-hydrology";
+import type { BufferUnits, SpatialRelationship, JoinType } from "../tha/terrain-hydrology";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
@@ -27,6 +29,40 @@ const ENABLE_DOWNLOAD = true;
 export const RIGHT_PANEL_ID = "geolibre-plugin-template-workbench";
 let _app : GeoLibreAppAPI;
 
+
+function isNumericValue(value: unknown): boolean {
+    if (typeof value === "number" && !isNaN(value)) return true;
+    if (typeof value === "string" && value.trim() !== "" && !isNaN(Number(value))) return true;
+    return false;
+}
+
+function getNumericOnlyKeys(geojson : FeatureCollection<Geometry, GeoJsonProperties>): string[]{
+  if (!geojson || geojson.type !== "FeatureCollection") {
+      throw new Error("Invalid GeoJSON FeatureCollection");
+  }
+  const keyStatus: Record<string, boolean> = {};
+  geojson.features.forEach(feature => {
+      const props: GeoJsonProperties = feature.properties || {};
+
+      // First time seeing a key → assume true until proven otherwise
+      Object.keys(props).forEach(key => {
+          if (!(key in keyStatus)) {
+              keyStatus[key] = true;
+          }
+          if (!isNumericValue(props[key])) {
+              keyStatus[key] = false;
+          }
+      });
+
+      // Keys missing in this feature → mark as false
+      Object.keys(keyStatus).forEach(key => {
+          if (!(key in props)) {
+              keyStatus[key] = false;
+          }
+      });
+  });
+  return Object.keys(keyStatus).filter(key => keyStatus[key]);
+}
 
 function createBandOptions(num : number, mode : boolean){
   const tcs : string[] = [];
@@ -700,17 +736,16 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     // Initialize file inputs
     naRebuildFileInputs();
   }
-  else if(method  === "Analisis Medan & Hidrologi"){
+  else if(method  === "Terrain & Hydrology Analysis"){
     const methodFunctionSelect = document.createElement("select");
-    const methodFunctionPlaceholder = document.createElement("select");
-    methodFunctionPlaceholder.value = "";
-    methodFunctionPlaceholder.textContent = "Select Analisis Medan & Hidrologi Function";
-    methodFunctionSelect.appendChild(methodFunctionPlaceholder);
-    const methodFunctionOptions = ["Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
-    const raMethodForm = document.createElement("div");
-    drawAnalysisMethods(raMethodForm, methodFunctionOptions);
+    const methodFunctionOptions = ["","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
+    const methodFunctionTC = ["Select Terrain & Hydrology Analysis","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
+    const thaMethodForm = document.createElement("div");
+    drawAnalysisMethods(methodFunctionSelect, methodFunctionOptions, methodFunctionTC);
+    wrapper.appendChild(methodFunctionSelect);
+    wrapper.appendChild(thaMethodForm);
     methodFunctionSelect.addEventListener("change", () => {
-        loadMethodForm(raMethodForm, methodFunctionSelect.value);
+        loadMethodForm(thaMethodForm, methodFunctionSelect.value);
       })
   }
   //Raster Analysis Forms
@@ -871,11 +906,328 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       }
     })
   }
-  else if(method === "Hazard Vulnerability Modeling"){
+  else if (method === "Hazard Vulnerability Modeling") {
+    // State references
+    let loadedInputLayer: FeatureCollection | null = null;
+    let loadedJoinLayer: FeatureCollection | null = null;
+    let bufferedLayer: FeatureCollection | null = null;
+    let registeredLayerIds: string[] = [];
 
+    // Clean up helper
+    const registerLayer = (name: string, data: FeatureCollection) => {
+      if (_app.addGeoJsonLayer) {
+        const id = _app.addGeoJsonLayer(name, data);
+        if (id) registeredLayerIds.push(id);
+        return id;
+      }
+      return "";
+    };
+
+    const clearPreviousLayers = () => {
+      registeredLayerIds.forEach(id => {
+        if (_app.unregisterExternalNativeLayer) {
+          _app.unregisterExternalNativeLayer(id);
+        }
+      });
+      registeredLayerIds = [];
+    };
+
+    // Form elements
+    const form = document.createElement("div");
+    form.className = "plugin-control-form";
+
+    const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
+      const field = document.createElement("div");
+      field.className = "plugin-control-group";
+      const label = document.createElement("label");
+      label.className = "plugin-control-label";
+      label.textContent = labelText;
+      field.appendChild(label);
+      field.appendChild(input);
+      if (helpText) {
+        const hint = document.createElement("div");
+        hint.className = "plugin-control-help";
+        hint.textContent = helpText;
+        field.appendChild(hint);
+      }
+      return field;
+    };
+
+    const statusEl = document.createElement("div");
+    statusEl.className = "plugin-control-status";
+    statusEl.textContent = "";
+
+    const setStatus = (msg: string) => {
+      statusEl.textContent = msg;
+    };
+
+    // 1. Input Layer Choice
+    const inputWrapper = document.createElement("div");
+    inputWrapper.className = "plugin-control-flex-col";
+
+    const inputFileInput = document.createElement("input");
+    inputFileInput.type = "file";
+    inputFileInput.accept = ".geojson,.json";
+    inputFileInput.className = "plugin-control-input";
+
+    const inputNameInput = document.createElement("input");
+    inputNameInput.type = "text";
+    inputNameInput.className = "plugin-control-input";
+    inputNameInput.placeholder = "Input layer name";
+
+    const inputLoadBtn = document.createElement("button");
+    inputLoadBtn.type = "button";
+    inputLoadBtn.className = "plugin-control-button";
+    inputLoadBtn.textContent = "Load Input";
+
+    const inputRow = document.createElement("div");
+    inputRow.className = "plugin-control-flex";
+    inputRow.appendChild(inputNameInput);
+    inputRow.appendChild(inputLoadBtn);
+    inputWrapper.appendChild(inputFileInput);
+    inputWrapper.appendChild(inputRow);
+
+    const inputStatusText = document.createElement("div");
+    inputStatusText.className = "plugin-control-status";
+    inputStatusText.textContent = "No input layer loaded";
+
+    // 2. Buffer distance & units
+    const distanceInput = document.createElement("input");
+    distanceInput.type = "number";
+    distanceInput.min = "0";
+    distanceInput.step = "0.1";
+    distanceInput.value = "1";
+    distanceInput.className = "plugin-control-input";
+
+    const unitSelect = document.createElement("select");
+    unitSelect.className = "plugin-control-input";
+    unitSelect.innerHTML = `
+      <option value="kilometers">Kilometers</option>
+      <option value="meters">Meters</option>
+      <option value="miles">Miles</option>
+    `;
+
+    const bufferBtn = document.createElement("button");
+    bufferBtn.type = "button";
+    bufferBtn.className = "plugin-control-button";
+    bufferBtn.textContent = "Buffer Only";
+    bufferBtn.disabled = true;
+
+    // 3. Join Layer Choice
+    const joinWrapper = document.createElement("div");
+    joinWrapper.className = "plugin-control-flex-col";
+
+    const joinFileInput = document.createElement("input");
+    joinFileInput.type = "file";
+    joinFileInput.accept = ".geojson,.json";
+    joinFileInput.className = "plugin-control-input";
+
+    const joinNameInput = document.createElement("input");
+    joinNameInput.type = "text";
+    joinNameInput.className = "plugin-control-input";
+    joinNameInput.placeholder = "Join layer name";
+
+    const joinLoadBtn = document.createElement("button");
+    joinLoadBtn.type = "button";
+    joinLoadBtn.className = "plugin-control-button";
+    joinLoadBtn.textContent = "Load Join";
+
+    const joinRow = document.createElement("div");
+    joinRow.className = "plugin-control-flex";
+    joinRow.appendChild(joinNameInput);
+    joinRow.appendChild(joinLoadBtn);
+    joinWrapper.appendChild(joinFileInput);
+    joinWrapper.appendChild(joinRow);
+
+    const joinStatusText = document.createElement("div");
+    joinStatusText.className = "plugin-control-status";
+    joinStatusText.textContent = "No join layer loaded";
+
+    // 4. Summarization configurations
+    const joinAttributeSelect = document.createElement("select");
+    joinAttributeSelect.className = "plugin-control-input";
+    joinAttributeSelect.disabled = true;
+
+    const relationshipSelect = document.createElement("select");
+    relationshipSelect.className = "plugin-control-input";
+    relationshipSelect.innerHTML = `
+      <option value="intersects">Intersects</option>
+      <option value="within">Within</option>
+      <option value="contains">Contains</option>
+    `;
+
+    const joinTypeSelect = document.createElement("select");
+    joinTypeSelect.className = "plugin-control-input";
+    joinTypeSelect.innerHTML = `
+      <option value="inner">Inner Join</option>
+      <option value="left">Left Join</option>
+    `;
+
+    const outputNameInput = document.createElement("input");
+    outputNameInput.type = "text";
+    outputNameInput.className = "plugin-control-input";
+    outputNameInput.placeholder = "Analysis Results";
+    outputNameInput.value = "Hazard Vulnerability Output";
+
+    const analyzeBtn = document.createElement("button");
+    analyzeBtn.type = "button";
+    analyzeBtn.className = "plugin-control-button";
+    analyzeBtn.textContent = "Run Analysis";
+    analyzeBtn.disabled = true;
+
+    // Enable/disable actions helper
+    const updateButtonStates = () => {
+      bufferBtn.disabled = !loadedInputLayer;
+      analyzeBtn.disabled = !(loadedInputLayer && loadedJoinLayer && joinAttributeSelect.value);
+    };
+
+    // Load handlers
+    inputLoadBtn.addEventListener("click", async () => {
+      const file = inputFileInput.files?.[0];
+      if (!file) {
+        setStatus("Select an input GeoJSON file first.");
+        return;
+      }
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text) as FeatureCollection;
+        loadedInputLayer = parsed;
+        bufferedLayer = null;
+        const layerName = inputNameInput.value.trim() || file.name;
+        inputStatusText.textContent = `Loaded: ${layerName}`;
+        registerLayer(layerName, parsed);
+        setStatus(`Successfully loaded ${layerName}`);
+      } catch {
+        setStatus("Failed to load input file.");
+      }
+      updateButtonStates();
+    });
+
+    joinLoadBtn.addEventListener("click", async () => {
+      const file = joinFileInput.files?.[0];
+      if (!file) {
+        setStatus("Select a join GeoJSON file first.");
+        return;
+      }
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text) as FeatureCollection;
+        loadedJoinLayer = parsed;
+        const layerName = joinNameInput.value.trim() || file.name;
+        joinStatusText.textContent = `Loaded: ${layerName}`;
+        registerLayer(layerName, parsed);
+
+        // Collect attributes
+        const attrs = new Set<string>();
+        getNumericOnlyKeys(parsed).forEach(attr => {
+          attrs.add(attr);
+        })
+
+        joinAttributeSelect.innerHTML = "";
+        if (attrs.size > 0) {
+          attrs.forEach(attr => {
+            const opt = document.createElement("option");
+            opt.value = attr;
+            opt.textContent = attr;
+            joinAttributeSelect.appendChild(opt);
+          });
+          joinAttributeSelect.disabled = false;
+        } else {
+          joinAttributeSelect.disabled = true;
+        }
+        setStatus(`Successfully loaded ${layerName}`);
+      } catch {
+        setStatus("Failed to load join file.");
+      }
+      updateButtonStates();
+    });
+
+    // Run handlers
+    bufferBtn.addEventListener("click", () => {
+      if (!loadedInputLayer) return;
+      const dist = parseFloat(distanceInput.value);
+      const units = unitSelect.value as BufferUnits;
+      if (isNaN(dist) || dist <= 0) {
+        setStatus("Distance must be a positive number.");
+        return;
+      }
+      try {
+        setStatus("Generating buffer...");
+        bufferedLayer = createBufferedLayer(loadedInputLayer, dist, units);
+        const outName = (inputNameInput.value.trim() || "Input") + " Buffer";
+        registerLayer(outName, bufferedLayer);
+        setStatus(`Buffered layer "${outName}" created.`);
+      } catch (err) {
+        setStatus("Buffering failed: " + (err as Error).message);
+      }
+    });
+
+    analyzeBtn.addEventListener("click", () => {
+      if (!loadedInputLayer || !loadedJoinLayer) return;
+      const dist = parseFloat(distanceInput.value);
+      const units = unitSelect.value as BufferUnits;
+      const rel = relationshipSelect.value as SpatialRelationship;
+      const jType = joinTypeSelect.value as JoinType;
+      const attr = joinAttributeSelect.value;
+      const outName = outputNameInput.value.trim() || "Analysis Result";
+
+      if (isNaN(dist) || dist <= 0) {
+        setStatus("Distance must be a positive number.");
+        return;
+      }
+
+      try {
+        setStatus("Running spatial overlay analysis...");
+        // If the user already generated a buffer, use it, otherwise generate a temporary buffer
+        const baseLayer = bufferedLayer || createBufferedLayer(loadedInputLayer, dist, units);
+
+        const result = analyzeBufferZone({
+          inputLayer: baseLayer,
+          joinLayer: loadedJoinLayer,
+          bufferDistance: dist,
+          bufferUnits: units,
+          spatialRelationship: rel,
+          joinType: jType,
+          joinAttribute: attr
+        });
+
+        registerLayer(outName, result);
+        setStatus(`Analysis layer "${outName}" created.`);
+      } catch (err) {
+        setStatus("Analysis failed: " + (err as Error).message);
+      }
+    });
+
+    // Append everything
+    form.appendChild(createField("Input Layer", inputWrapper, "Upload the geojson layer to buffer."));
+    form.appendChild(inputStatusText);
+    form.appendChild(createField("Buffer Distance", distanceInput));
+    form.appendChild(createField("Buffer Units", unitSelect));
+
+    const bufRow = document.createElement("div");
+    bufRow.className = "plugin-control-flex";
+    bufRow.appendChild(bufferBtn);
+    form.appendChild(bufRow);
+
+    form.appendChild(createField("Join Layer (Summarize)", joinWrapper, "Upload the attribute/points layer to overlay."));
+    form.appendChild(joinStatusText);
+    form.appendChild(createField("Join Numeric Attribute", joinAttributeSelect));
+    form.appendChild(createField("Spatial Relationship", relationshipSelect));
+    form.appendChild(createField("Overlay Join Type", joinTypeSelect));
+    form.appendChild(createField("Output Layer Name", outputNameInput));
+
+    form.appendChild(analyzeBtn);
+    form.appendChild(statusEl);
+
+    wrapper.appendChild(form);
+
+    return () => {
+      clearPreviousLayers();
+      form.remove();
+    };
   }
   else if(method ==="Hazard Resistance Analysis"){
-
+    // TODO: implement Hazard Resistance Analysis form
   }
 }
 
@@ -930,13 +1282,13 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
         "", //placeholder
         "Raster Analysis",
         "Network Analysis",
-        "Analisis Medan & Hidrologi",
+        "Terrain & Hydrology Analysis",
       ]
       const methodOptionsTextContents = [
         "Select Geoprocessing function",  //placeholder
         "Raster Analysis",
         "Network Analysis",
-        "Analisis Medan & Hidrologi",
+        "Terrain & Hydrology Analysis",
       ]
       drawAnalysisMethods(method,methodOptions, methodOptionsTextContents);
 

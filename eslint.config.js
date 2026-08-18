@@ -11,6 +11,7 @@ export default tseslint.config(
       "geolibre-plugin/**",
       "coverage/**",
       "node_modules/**",
+      "Docs/Samples/**",
     ],
   },
   js.configs.recommended,
@@ -24,6 +25,7 @@ export default tseslint.config(
       globals: { ...globals.browser, ...globals.node },
       parserOptions: {
         ecmaFeatures: { jsx: true },
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
