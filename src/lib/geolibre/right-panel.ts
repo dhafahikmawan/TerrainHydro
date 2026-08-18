@@ -4,8 +4,8 @@ import { generateNDVI, generateNDWI, generateSlope } from "../tha/raster-analysi
 import { getGeoTIFFBandCount } from "../utils/geotiff-processor";
 import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
-import { createBufferedLayer, analyzeBufferZone } from "../tha/terrain-hydrology";
-import type { BufferUnits, SpatialRelationship, JoinType } from "../tha/terrain-hydrology";
+import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
+import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../tha/terrain-hydrology";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
@@ -911,26 +911,16 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     let loadedInputLayer: FeatureCollection | null = null;
     let loadedJoinLayer: FeatureCollection | null = null;
     let bufferedLayer: FeatureCollection | null = null;
-    let registeredLayerIds: string[] = [];
 
     // Clean up helper
     const registerLayer = (name: string, data: FeatureCollection) => {
       if (_app.addGeoJsonLayer) {
         const id = _app.addGeoJsonLayer(name, data);
-        if (id) registeredLayerIds.push(id);
         return id;
       }
       return "";
     };
 
-    const clearPreviousLayers = () => {
-      registeredLayerIds.forEach(id => {
-        if (_app.unregisterExternalNativeLayer) {
-          _app.unregisterExternalNativeLayer(id);
-        }
-      });
-      registeredLayerIds = [];
-    };
 
     // Form elements
     const form = document.createElement("div");
@@ -1221,13 +1211,305 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     wrapper.appendChild(form);
 
-    return () => {
-      clearPreviousLayers();
-      form.remove();
-    };
   }
   else if(method ==="Hazard Resistance Analysis"){
-    // TODO: implement Hazard Resistance Analysis form
+    const app = _app;
+    const form = document.createElement("form");
+    form.className = "geoprocessing-form";
+
+    // ── createField helper (scoped to this block) ──
+    const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
+      const field = document.createElement("div");
+      field.className = "plugin-control-group";
+      const label = document.createElement("label");
+      label.className = "plugin-control-label";
+      label.textContent = labelText;
+      field.appendChild(label);
+      field.appendChild(input);
+      if (helpText) {
+        const hint = document.createElement("div");
+        hint.className = "plugin-control-help";
+        hint.textContent = helpText;
+        field.appendChild(hint);
+      }
+      return field;
+    };
+
+    // ── Input Layer File Field ──
+    const inputLayerWrapper = document.createElement("div");
+    const inputLayerInput = document.createElement("input");
+    inputLayerInput.type = "file";
+    inputLayerInput.accept = ".geojson,.json,application/geo+json";
+    inputLayerInput.className = "spatio-file-input";
+    inputLayerWrapper.appendChild(inputLayerInput);
+
+    // ── Data Layers Count Field ──
+    const countWrapper = document.createElement("div");
+    const countInput = document.createElement("input");
+    countInput.type = "number";
+    countInput.min = "0";
+    countInput.max = "10";
+    countInput.value = "0";
+    countInput.className = "spatio-file-input";
+    countWrapper.appendChild(countInput);
+
+    // ── Container for dynamic data layers file inputs ──
+    const dataLayersContainer = document.createElement("div");
+
+    // ── Method Selector (AND / OR) ──
+    const methodWrapper = document.createElement("div");
+    const methodSelect = document.createElement("select");
+    methodSelect.className = "spatio-file-input";
+    drawAnalysisMethods(methodSelect, ["OR", "AND"], ["OR (Union)", "AND (Intersection)"]);
+    methodWrapper.appendChild(methodSelect);
+
+    // ── Clip Checkbox ──
+    const clipWrapper = document.createElement("div");
+    const clipCheckbox = document.createElement("input");
+    clipCheckbox.type = "checkbox";
+    clipCheckbox.id = "hra-clip-checkbox";
+    const clipLabel = document.createElement("label");
+    clipLabel.htmlFor = "hra-clip-checkbox";
+    clipLabel.textContent = " Clip output features to input layer boundaries";
+    clipLabel.style.marginLeft = "8px";
+    clipWrapper.append(clipCheckbox, clipLabel);
+
+    // ── Output layer name input ──
+    const outputNameWrapper = document.createElement("div");
+    const outputNameInput = document.createElement("input");
+    outputNameInput.type = "text";
+    outputNameInput.value = "hazard_resistance_output";
+    outputNameInput.className = "spatio-file-input";
+    outputNameWrapper.appendChild(outputNameInput);
+
+    // ── Status Element ──
+    const statusEl = document.createElement("div");
+    statusEl.className = "geoprocessing-status";
+    statusEl.style.marginTop = "10px";
+
+    // ── Action Buttons Container ──
+    const actionsWrapper = document.createElement("div");
+    actionsWrapper.className = "na-actions-section";
+    actionsWrapper.style.display = "flex";
+    actionsWrapper.style.flexDirection = "column";
+    actionsWrapper.style.gap = "8px";
+    actionsWrapper.style.marginTop = "15px";
+
+    const analyzeBtn = document.createElement("button");
+    analyzeBtn.type = "button";
+    analyzeBtn.className = "na-btn na-btn--primary";
+    analyzeBtn.textContent = "Run Analysis";
+
+    const resetBtn = document.createElement("button");
+    resetBtn.type = "button";
+    resetBtn.className = "na-btn na-btn--secondary";
+    resetBtn.textContent = "Reset Form";
+
+    actionsWrapper.append(analyzeBtn, resetBtn);
+
+    // ── Optional Download Buttons (controlled by ENABLE_DOWNLOAD) ──
+    let downloadFinalBtn: HTMLButtonElement | null = null;
+    let downloadIntermediateBtn: HTMLButtonElement | null = null;
+
+    if (ENABLE_DOWNLOAD) {
+      downloadFinalBtn = document.createElement("button");
+      downloadFinalBtn.type = "button";
+      downloadFinalBtn.className = "na-btn na-btn--secondary";
+      downloadFinalBtn.textContent = "Download Final GeoJSON";
+      downloadFinalBtn.disabled = true;
+
+      downloadIntermediateBtn = document.createElement("button");
+      downloadIntermediateBtn.type = "button";
+      downloadIntermediateBtn.className = "na-btn na-btn--secondary";
+      downloadIntermediateBtn.textContent = "Download Intermediate GeoJSON";
+      downloadIntermediateBtn.disabled = true;
+
+      actionsWrapper.append(downloadFinalBtn, downloadIntermediateBtn);
+    }
+
+    // ── Form State ──
+    let inputLayerFile: File | null = null;
+    const dataLayerFiles: (File | null)[] = [];
+    let finalOutput: FeatureCollection<Geometry, GeoJsonProperties> | null = null;
+    let intermediateOutput: FeatureCollection<Geometry, GeoJsonProperties> | null = null;
+    let registeredLayerId: string | null = null;
+
+    const setStatus = (message: string, isError = false) => {
+      statusEl.textContent = message;
+      statusEl.style.color = isError ? "#dc2626" : "#4b5563";
+    };
+
+    const clearPreviousLayer = () => {
+      if (registeredLayerId && app.removeLayer) {
+        app.removeLayer(registeredLayerId);
+        registeredLayerId = null;
+      }
+    };
+
+    const updateDownloadButtons = () => {
+      if (downloadFinalBtn) downloadFinalBtn.disabled = !finalOutput;
+      if (downloadIntermediateBtn) downloadIntermediateBtn.disabled = !intermediateOutput;
+    };
+
+    // ── Dynamic Input Builder for Data Layers ──
+    const rebuildDataLayerInputs = () => {
+      dataLayersContainer.innerHTML = "";
+      const count = Math.max(0, Math.min(10, parseInt(countInput.value, 10) || 0));
+      dataLayerFiles.length = count;
+
+      for (let i = 0; i < count; i++) {
+        const itemField = document.createElement("div");
+        itemField.style.marginTop = "8px";
+
+        const label = document.createElement("label");
+        label.textContent = `Data Layer ${i + 1}`;
+        label.className = "geoprocessing-field-label";
+
+        const fileIn = document.createElement("input");
+        fileIn.type = "file";
+        fileIn.accept = ".geojson,.json,application/geo+json";
+        fileIn.className = "spatio-file-input";
+
+        fileIn.addEventListener("change", () => {
+          dataLayerFiles[i] = fileIn.files?.[0] || null;
+        });
+
+        itemField.append(label, fileIn);
+        dataLayersContainer.appendChild(itemField);
+      }
+    };
+
+    // ── Event Listeners ──
+    inputLayerInput.addEventListener("change", () => {
+      inputLayerFile = inputLayerInput.files?.[0] || null;
+    });
+
+    countInput.addEventListener("change", rebuildDataLayerInputs);
+
+    // ── Helper to read File to GeoJSON ──
+    const readFileAsGeoJson = async (file: File): Promise<LoadedLayer> => {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (parsed.type !== "FeatureCollection") {
+        throw new Error(`File ${file.name} is not a valid GeoJSON FeatureCollection`);
+      }
+      return {
+        name: file.name.replace(/\.[^/.]+$/, "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        data: parsed,
+      };
+    };
+
+    // ── Helper to trigger Browser Download ──
+    const triggerDownload = (filename: string, content: FeatureCollection<Geometry, GeoJsonProperties>) => {
+      const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/geo+json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    // ── Reset Handler ──
+    resetBtn.addEventListener("click", () => {
+      form.reset();
+      inputLayerFile = null;
+      dataLayerFiles.length = 0;
+      finalOutput = null;
+      intermediateOutput = null;
+      rebuildDataLayerInputs();
+      clearPreviousLayer();
+      updateDownloadButtons();
+      setStatus("Form cleared. Upload new layers to analyze.");
+    });
+
+    // ── Analyze Handler ──
+    analyzeBtn.addEventListener("click", async () => {
+      try {
+        setStatus("Processing spatial analysis...");
+        analyzeBtn.disabled = true;
+
+        if (!inputLayerFile) {
+          throw new Error("Please upload an Input Layer.");
+        }
+
+        const count = dataLayerFiles.length;
+        for (let i = 0; i < count; i++) {
+          if (!dataLayerFiles[i]) {
+            throw new Error(`Please upload a GeoJSON file for Data Layer ${i + 1}.`);
+          }
+        }
+
+        const inputLayer = await readFileAsGeoJson(inputLayerFile);
+        const dataLayers = await Promise.all(
+          dataLayerFiles.map(file => readFileAsGeoJson(file!))
+        );
+
+        const methodVal = methodSelect.value;
+        const clipToInput = clipCheckbox.checked;
+
+        clearPreviousLayer();
+
+        const result = methodVal === "AND"
+          ? runAndAnalysisWithIntermediate(inputLayer, dataLayers, clipToInput)
+          : runOrAnalysisWithIntermediate(inputLayer, dataLayers, clipToInput);
+
+        finalOutput = result.finalOutput;
+        intermediateOutput = result.intermediateOutput;
+        updateDownloadButtons();
+
+        if (app.addGeoJsonLayer) {
+          const outName = outputNameInput.value.trim() || "hazard_resistance_output";
+          const layerId = app.addGeoJsonLayer(outName, finalOutput);
+          registeredLayerId = layerId || outName;
+          setStatus(`Success! Added layer "${outName}" to map.`);
+        } else {
+          setStatus("Analysis complete. (Note: host app does not support displaying layers).");
+        }
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : String(err), true);
+      } finally {
+        analyzeBtn.disabled = false;
+      }
+    });
+
+    if (downloadFinalBtn) {
+      downloadFinalBtn.addEventListener("click", () => {
+        if (finalOutput) {
+          const outName = outputNameInput.value.trim() || "hazard_resistance_output";
+          triggerDownload(`${outName}_final.geojson`, finalOutput);
+        }
+      });
+    }
+
+    if (downloadIntermediateBtn) {
+      downloadIntermediateBtn.addEventListener("click", () => {
+        if (intermediateOutput) {
+          const outName = outputNameInput.value.trim() || "hazard_resistance_output";
+          triggerDownload(`${outName}_intermediate.geojson`, intermediateOutput);
+        }
+      });
+    }
+
+    // ── Append Fields to Form ──
+    form.appendChild(createField("Input Layer (Boundary)", inputLayerWrapper, "Upload the base layer defining analysis boundaries."));
+    form.appendChild(createField("Number of Data Layers", countWrapper, "Specify how many additional layers to intersect/union."));
+    form.appendChild(dataLayersContainer);
+    form.appendChild(createField("Analysis Method", methodWrapper, "Select spatial logical combination operator."));
+    form.appendChild(clipWrapper);
+    form.appendChild(createField("Output Layer Name", outputNameWrapper));
+    form.appendChild(actionsWrapper);
+    form.appendChild(statusEl);
+
+    wrapper.appendChild(form);
+
+    // Initial load
+    rebuildDataLayerInputs();
+
+    return () => {
+      clearPreviousLayer();
+      form.remove();
+    };
   }
 }
 
