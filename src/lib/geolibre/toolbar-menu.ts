@@ -1,6 +1,6 @@
 import { FLOATING_PANEL_ID } from "./floating-panel";
-import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
-import { RIGHT_PANEL_ID } from "./right-panel";
+import type { GeoLibreAppAPI, GeoLibreControl, GeoLibreToolbarMenuItem } from "./host-api";
+import { RIGHT_PANEL_ID, selectMethod, BASE_METHODS} from "./right-panel";
 
 /**
  * Demonstration of the GeoLibre top toolbar menu host API.
@@ -29,6 +29,18 @@ export function registerTemplateToolbarMenu<TControl extends GeoLibreControl>(
 ): (() => void) | null {
   if (!app.registerToolbarMenu) return null;
 
+  let submenuItems : GeoLibreToolbarMenuItem [] = [];
+  for(let i =1; i<BASE_METHODS.length;i++){
+    submenuItems.push({
+      id: BASE_METHODS[i],
+      label: BASE_METHODS[i],
+      disabled: !app.openRightPanel,
+      onSelect: () => {
+        app.openRightPanel?.(RIGHT_PANEL_ID);
+        selectMethod(BASE_METHODS[i]);
+      },
+    })
+  }
   return app.registerToolbarMenu({
     id: TOOLBAR_MENU_ID,
     label: "Template",
@@ -45,14 +57,7 @@ export function registerTemplateToolbarMenu<TControl extends GeoLibreControl>(
         type: "submenu",
         id: "tools",
         label: "Tools",
-        items: [
-          {
-            id: "open-floating",
-            label: "Open floating tools",
-            disabled: !app.openFloatingPanel,
-            onSelect: () => app.openFloatingPanel?.(FLOATING_PANEL_ID),
-          },
-        ],
+        items:submenuItems,
       },
       { type: "separator" },
       {

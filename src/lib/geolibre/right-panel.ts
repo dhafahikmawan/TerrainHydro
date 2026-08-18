@@ -9,6 +9,18 @@ import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "..
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
+export const BASE_METHODS = [
+    "", //placeholder
+    "Raster Analysis",
+    "Network Analysis",
+    "Terrain & Hydrology Analysis",
+  ];
+export const BASE_METHODS_TC = [
+  "Select Geoprocessing function",  //placeholder
+  "Raster Analysis",
+  "Network Analysis",
+  "Terrain & Hydrology Analysis",
+]
 
 /**
  * Demonstration of the GeoLibre right-sidebar panel host API.
@@ -28,6 +40,15 @@ const ENABLE_DOWNLOAD = true;
 /** Stable id for this plugin's right panel. Replace with your own. */
 export const RIGHT_PANEL_ID = "geolibre-plugin-template-workbench";
 let _app : GeoLibreAppAPI;
+let _method : HTMLSelectElement;
+let _methodForm : HTMLElement;
+
+export function selectMethod(method : string){
+  if(_method && _methodForm){
+    _method.value = method;
+    loadMethodForm(_methodForm, method);
+  }
+}
 
 
 function isNumericValue(value: unknown): boolean {
@@ -1339,12 +1360,6 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       statusEl.style.color = isError ? "#dc2626" : "#4b5563";
     };
 
-    const clearPreviousLayer = () => {
-      if (registeredLayerId && app.removeLayer) {
-        app.removeLayer(registeredLayerId);
-        registeredLayerId = null;
-      }
-    };
 
     const updateDownloadButtons = () => {
       if (downloadFinalBtn) downloadFinalBtn.disabled = !finalOutput;
@@ -1418,7 +1433,6 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       finalOutput = null;
       intermediateOutput = null;
       rebuildDataLayerInputs();
-      clearPreviousLayer();
       updateDownloadButtons();
       setStatus("Form cleared. Upload new layers to analyze.");
     });
@@ -1448,7 +1462,6 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         const methodVal = methodSelect.value;
         const clipToInput = clipCheckbox.checked;
 
-        clearPreviousLayer();
 
         const result = methodVal === "AND"
           ? runAndAnalysisWithIntermediate(inputLayer, dataLayers, clipToInput)
@@ -1507,7 +1520,6 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     rebuildDataLayerInputs();
 
     return () => {
-      clearPreviousLayer();
       form.remove();
     };
   }
@@ -1560,20 +1572,8 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       methodPlaceholder.className = "geoprocessing-method-option";
       method.appendChild(methodPlaceholder);
       */
-      const methodOptions = [
-        "", //placeholder
-        "Raster Analysis",
-        "Network Analysis",
-        "Terrain & Hydrology Analysis",
-      ]
-      const methodOptionsTextContents = [
-        "Select Geoprocessing function",  //placeholder
-        "Raster Analysis",
-        "Network Analysis",
-        "Terrain & Hydrology Analysis",
-      ]
-      drawAnalysisMethods(method,methodOptions, methodOptionsTextContents);
-
+      drawAnalysisMethods(method,BASE_METHODS, BASE_METHODS_TC);
+      _method = method;
       //Method Form Container
       const methodFormContainer = document.createElement("div");
       methodFormContainer.className = "geoprocessing-method-form-container";
@@ -1584,6 +1584,7 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
         "Replace this content with your own workbench, query review, or " +
         "dashboard UI. Drive it with app.openRightPanel(), collapseRightPanel(), " +
         "and closeRightPanel().";
+      _methodForm = methodFormContainer;
 
       wrap.append(heading, body, method, methodFormContainer);
       container.appendChild(wrap);
