@@ -8,6 +8,7 @@ import {
   RIGHT_PANEL_ID,
   registerTemplateRightPanel,
 } from "../src/lib/geolibre/right-panel";
+import { styleRightPanelTree } from "../src/lib/styles/right-panel-styles";
 
 /**
  * Minimal stub of the host API. Captures the right-panel registration so the
@@ -56,6 +57,88 @@ describe("registerTemplateRightPanel", () => {
     expect(cleanup).toBeTypeOf("function");
     (cleanup as () => void)();
     expect(container.querySelector("h2")).toBeNull();
+  });
+
+  it("applies registry styles without replacing native controls", () => {
+    const { app, getRegistered } = createApp();
+    registerTemplateRightPanel(app);
+
+    const panel = getRegistered();
+    const container = document.createElement("div");
+    panel?.render(container);
+
+    const root = container.querySelector(".geolibre-plugin-right-panel") as HTMLElement;
+    const methodSelect = root.querySelector("select") as HTMLSelectElement;
+    const firstOption = methodSelect.querySelector("option") as HTMLOptionElement;
+
+    expect(root.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(methodSelect).toBeInstanceOf(HTMLSelectElement);
+    expect(methodSelect.style.border).not.toBe("");
+    expect(firstOption.style.backgroundColor).toBe("rgb(255, 255, 255)");
+    expect(firstOption.style.color).toBe("rgb(0, 0, 0)");
+
+    methodSelect.value = "Raster Analysis";
+    methodSelect.dispatchEvent(new Event("change"));
+    const rasterSelect = root.querySelectorAll("select")[1] as HTMLSelectElement;
+    rasterSelect.value = "Slope";
+    rasterSelect.dispatchEvent(new Event("change"));
+
+    const fileInput = root.querySelector('input[type="file"]') as HTMLInputElement;
+    const actionButton = Array.from(root.querySelectorAll("button")).find(
+      (button) => button.textContent === "Generate Slope",
+    ) as HTMLButtonElement;
+
+    expect(fileInput).toBeInstanceOf(HTMLInputElement);
+    expect(fileInput.type).toBe("file");
+    expect(fileInput.style.border).not.toBe("");
+    expect(actionButton).toBeInstanceOf(HTMLButtonElement);
+    expect(actionButton.style.border).not.toBe("");
+  });
+
+  it("styles the complete optimal route submenu when pick buttons contain SVG", () => {
+    const { app, getRegistered } = createApp();
+    registerTemplateRightPanel(app);
+
+    const panel = getRegistered();
+    const container = document.createElement("div");
+    panel?.render(container);
+    const root = container.querySelector(".geolibre-plugin-right-panel") as HTMLElement;
+    const methodSelect = root.querySelector("select") as HTMLSelectElement;
+
+    methodSelect.value = "Network Analysis";
+    methodSelect.dispatchEvent(new Event("change"));
+    const networkMethodSelect = root.querySelectorAll("select")[1] as HTMLSelectElement;
+    networkMethodSelect.value = "Find Optimal Route";
+    networkMethodSelect.dispatchEvent(new Event("change"));
+
+    expect(root.querySelector("#na-start-coord")).not.toBeNull();
+    expect(root.querySelector("#na-dest-coord")?.getAttribute("style")).toContain("border");
+    expect(root.querySelector("#na-snap-tolerance")?.getAttribute("style")).toContain("border");
+    expect(root.querySelector("#na-pick-dest")?.getAttribute("style")).toContain("border");
+    expect(root.querySelector("#na-analyze-btn")?.getAttribute("style")).toContain("border");
+  });
+
+  it("styles Network Analysis layer-selection cards from the registry", () => {
+    const root = document.createElement("div");
+    const layerList = document.createElement("div");
+    layerList.className = "na-layer-list";
+    const card = document.createElement("div");
+    card.className = "na-layer-card";
+    const label = document.createElement("label");
+    label.className = "na-check-label";
+    const subForm = document.createElement("div");
+    subForm.className = "na-layer-subform";
+    card.append(label, subForm);
+    layerList.appendChild(card);
+    root.appendChild(layerList);
+
+    styleRightPanelTree(root);
+
+    expect(layerList.style.gap).toBe("6px");
+    expect(card.style.border).not.toBe("");
+    expect(card.style.backgroundColor).toBe("rgb(249, 250, 251)");
+    expect(label.style.color).toBe("rgb(17, 24, 39)");
+    expect(subForm.style.borderTop).not.toBe("");
   });
 
   it("closes and unregisters the panel when disposed", () => {

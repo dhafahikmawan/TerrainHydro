@@ -6,6 +6,7 @@ import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
 import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
 import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../tha/terrain-hydrology";
+import { applyRightPanelStyles, styleRightPanelTree } from "../styles/right-panel-styles";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
@@ -14,12 +15,14 @@ export const BASE_METHODS = [
     "Raster Analysis",
     "Network Analysis",
     "Terrain & Hydrology Analysis",
+    "Watershed Delineation",
   ];
 export const BASE_METHODS_TC = [
   "Select Geoprocessing function",  //placeholder
   "Raster Analysis",
   "Network Analysis",
   "Terrain & Hydrology Analysis",
+  "Watershed Delineation",
 ]
 
 /**
@@ -38,7 +41,7 @@ export const BASE_METHODS_TC = [
  */
 
 /** Stable id for this plugin's right panel. Replace with your own. */
-export const RIGHT_PANEL_ID = "geolibre-plugin-template-workbench";
+export const RIGHT_PANEL_ID = "spatio-terrain-hydrology-panel";
 let _app : GeoLibreAppAPI;
 let _method : HTMLSelectElement;
 let _methodForm : HTMLElement;
@@ -95,10 +98,11 @@ function createBandOptions(num : number, mode : boolean){
   return tcs;
 }
 
-function drawAnalysisMethods(dropdown : HTMLElement, methods : string[], textContents? : string[]){
+function drawDropdownOptions(dropdown : HTMLElement, methods : string[], textContents? : string[]){
   methods.forEach((method, index) => {
     const methodOption = document.createElement("option");
     methodOption.className = "geoprocessing-method-option";
+    applyRightPanelStyles(methodOption, "right-panel-option");
     methodOption.value = method;
     if(!textContents || index >= textContents.length){
       methodOption.textContent = method;
@@ -125,9 +129,10 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const methodFunctionOptionsTC = ["Select Analysis Function", "Slope", "NDVI", "NDWI"];
     const raMethodForm = document.createElement("div");
     wrapper.appendChild(raMethodForm);
-    drawAnalysisMethods(methodFunctionSelect, methodFunctionOptions, methodFunctionOptionsTC);
+    drawDropdownOptions(methodFunctionSelect, methodFunctionOptions, methodFunctionOptionsTC);
     methodFunctionSelect.addEventListener("change", () => {
         loadMethodForm(raMethodForm, methodFunctionSelect.value);
+        styleRightPanelTree(wrapper);
       })
   }
   else if(method === "Network Analysis"){
@@ -360,6 +365,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         });
         naLayerListEl.appendChild(card);
       }
+      styleRightPanelTree(wrapper);
     }
 
     // ── Rebuild file inputs ──
@@ -418,6 +424,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         rowWrapper.appendChild(statusSpan);
         naFileInputsContainer.appendChild(rowWrapper);
       }
+      styleRightPanelTree(wrapper);
     }
 
     // ── Run Analysis ──
@@ -762,11 +769,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const methodFunctionOptions = ["","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
     const methodFunctionTC = ["Select Terrain & Hydrology Analysis","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
     const thaMethodForm = document.createElement("div");
-    drawAnalysisMethods(methodFunctionSelect, methodFunctionOptions, methodFunctionTC);
+    drawDropdownOptions(methodFunctionSelect, methodFunctionOptions, methodFunctionTC);
     wrapper.appendChild(methodFunctionSelect);
     wrapper.appendChild(thaMethodForm);
     methodFunctionSelect.addEventListener("change", () => {
         loadMethodForm(thaMethodForm, methodFunctionSelect.value);
+        styleRightPanelTree(wrapper);
       })
   }
   //Raster Analysis Forms
@@ -782,7 +790,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const unitSelectLabel = document.createElement("h1");
     unitSelectLabel.textContent = "Select Slope Unit";
     const unitSelect = document.createElement("select");
-    drawAnalysisMethods(unitSelect, ["Degrees", "Percent", "Ratio"]);
+    drawDropdownOptions(unitSelect, ["Degrees", "Percent", "Ratio"]);
     const slopeZFactor = document.createElement("input");
     slopeZFactor.type = "number";
     slopeZFactor.min = "0";
@@ -842,11 +850,11 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(redSelect);
     fileInputA.addEventListener('change', async () =>{
       const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
-      drawAnalysisMethods(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+      drawDropdownOptions(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
     });
     fileInputB.addEventListener('change', async ()=>{
       const bands  = fileInputB.files ? await getGeoTIFFBandCount(fileInputB.files?.[0]) : 0;
-      drawAnalysisMethods(redSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+      drawDropdownOptions(redSelect, createBandOptions(bands, false), createBandOptions(bands, true));
     });
     const actionButton = document.createElement("button");
     actionButton.type = "button";
@@ -902,11 +910,11 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(greenSelect);
     fileInputA.addEventListener('change', async () =>{
       const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
-      drawAnalysisMethods(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+      drawDropdownOptions(nirSelect, createBandOptions(bands, false), createBandOptions(bands, true));
     });
     fileInputB.addEventListener('change', async ()=>{
       const bands  = fileInputB.files ? await getGeoTIFFBandCount(fileInputB.files?.[0]) : 0;;
-      drawAnalysisMethods(greenSelect, createBandOptions(bands, false), createBandOptions(bands, true));
+      drawDropdownOptions(greenSelect, createBandOptions(bands, false), createBandOptions(bands, true));
     });
     const actionButton = document.createElement("button");
     actionButton.type = "button";
@@ -1138,6 +1146,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         if (attrs.size > 0) {
           attrs.forEach(attr => {
             const opt = document.createElement("option");
+            applyRightPanelStyles(opt, "right-panel-option");
             opt.value = attr;
             opt.textContent = attr;
             joinAttributeSelect.appendChild(opt);
@@ -1281,7 +1290,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const methodWrapper = document.createElement("div");
     const methodSelect = document.createElement("select");
     methodSelect.className = "spatio-file-input";
-    drawAnalysisMethods(methodSelect, ["OR", "AND"], ["OR (Union)", "AND (Intersection)"]);
+    drawDropdownOptions(methodSelect, ["OR", "AND"], ["OR (Union)", "AND (Intersection)"]);
     methodWrapper.appendChild(methodSelect);
 
     // ── Clip Checkbox ──
@@ -1353,7 +1362,6 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const dataLayerFiles: (File | null)[] = [];
     let finalOutput: FeatureCollection<Geometry, GeoJsonProperties> | null = null;
     let intermediateOutput: FeatureCollection<Geometry, GeoJsonProperties> | null = null;
-    let registeredLayerId: string | null = null;
 
     const setStatus = (message: string, isError = false) => {
       statusEl.textContent = message;
@@ -1392,6 +1400,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         itemField.append(label, fileIn);
         dataLayersContainer.appendChild(itemField);
       }
+      styleRightPanelTree(wrapper);
     };
 
     // ── Event Listeners ──
@@ -1473,8 +1482,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
         if (app.addGeoJsonLayer) {
           const outName = outputNameInput.value.trim() || "hazard_resistance_output";
-          const layerId = app.addGeoJsonLayer(outName, finalOutput);
-          registeredLayerId = layerId || outName;
+          app.addGeoJsonLayer(outName, finalOutput);
           setStatus(`Success! Added layer "${outName}" to map.`);
         } else {
           setStatus("Analysis complete. (Note: host app does not support displaying layers).");
@@ -1572,26 +1580,23 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       methodPlaceholder.className = "geoprocessing-method-option";
       method.appendChild(methodPlaceholder);
       */
-      drawAnalysisMethods(method,BASE_METHODS, BASE_METHODS_TC);
+      drawDropdownOptions(method,BASE_METHODS, BASE_METHODS_TC);
       _method = method;
       //Method Form Container
       const methodFormContainer = document.createElement("div");
       methodFormContainer.className = "geoprocessing-method-form-container";
 
       const body = document.createElement("p");
-      body.textContent =
-        "This panel is rendered by the plugin through app.registerRightPanel(). " +
-        "Replace this content with your own workbench, query review, or " +
-        "dashboard UI. Drive it with app.openRightPanel(), collapseRightPanel(), " +
-        "and closeRightPanel().";
       _methodForm = methodFormContainer;
 
       wrap.append(heading, body, method, methodFormContainer);
       container.appendChild(wrap);
+      styleRightPanelTree(wrap);
 
       //Event: Method selected
       method.addEventListener("change", () => {
         loadMethodForm(methodFormContainer, method.value);
+        styleRightPanelTree(wrap);
       })
 
       // Optional cleanup, run when the panel closes or is unregistered.
