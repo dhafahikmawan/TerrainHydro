@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    { "type": "Feature", "properties": { "id": "N1-N2", "distance": 150 }, "geometry": { "type": "LineString", "coordinates": [[110.3671, -7.8014], [110.3685, -7.8020]] } },
+    { "type": "Feature", "properties": { "id": "N2-N3", "distance": 180 }, "geometry": { "type": "LineString", "coordinates": [[110.3685, -7.8020], [110.3698, -7.8028]] } },
+    { "type": "Feature", "properties": { "id": "N3-N4", "distance": 210 }, "geometry": { "type": "LineString", "coordinates": [[110.3698, -7.8028], [110.3710, -7.8035]] } },
+    { "type": "Feature", "properties": { "id": "N4-N5", "distance": 160 }, "geometry": { "type": "LineString", "coordinates": [[110.3710, -7.8035], [110.3722, -7.8040]] } },
+    { "type": "Feature", "properties": { "id": "N5-N6", "distance": 190 }, "geometry": { "type": "LineString", "coordinates": [[110.3722, -7.8040], [110.3735, -7.8048]] } },
+    { "type": "Feature", "properties": { "id": "N6-N7", "distance": 170 }, "geometry": { "type": "LineString", "coordinates": [[110.3735, -7.8048], [110.3748, -7.8055]] } },
+    { "type": "Feature", "properties": { "id": "N7-N8", "distance": 200 }, "geometry": { "type": "LineString", "coordinates": [[110.3748, -7.8055], [110.3760, -7.8062]] } },
+    { "type": "Feature", "properties": { "id": "N8-N9", "distance": 220 }, "geometry": { "type": "LineString", "coordinates": [[110.3760, -7.8062], [110.3775, -7.8070]] } },
+    { "type": "Feature", "properties": { "id": "N9-N10", "distance": 180 }, "geometry": { "type": "LineString", "coordinates": [[110.3775, -7.8070], [110.3788, -7.8078]] } },
+
+    { "type": "Feature", "properties": { "id": "N1-N5", "distance": 450 }, "geometry": { "type": "LineString", "coordinates": [[110.3671, -7.8014], [110.3722, -7.8040]] } },
+    { "type": "Feature", "properties": { "id": "N2-N6", "distance": 500 }, "geometry": { "type": "LineString", "coordinates": [[110.3685, -7.8020], [110.3735, -7.8048]] } },
+    { "type": "Feature", "properties": { "id": "N3-N7", "distance": 520 }, "geometry": { "type": "LineString", "coordinates": [[110.3698, -7.8028], [110.3748, -7.8055]] } },
+    { "type": "Feature", "properties": { "id": "N4-N8", "distance": 540 }, "geometry": { "type": "LineString", "coordinates": [[110.3710, -7.8035], [110.3760, -7.8062]] } },
+    { "type": "Feature", "properties": { "id": "N5-N9", "distance": 560 }, "geometry": { "type": "LineString", "coordinates": [[110.3722, -7.8040], [110.3775, -7.8070]] } },
+    { "type": "Feature", "properties": { "id": "N6-N10", "distance": 580 }, "geometry": { "type": "LineString", "coordinates": [[110.3735, -7.8048], [110.3788, -7.8078]] } }
+  ]
+}

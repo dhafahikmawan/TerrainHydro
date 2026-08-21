@@ -366,6 +366,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         naLayerListEl.appendChild(card);
       }
       styleRightPanelTree(wrapper);
+      if (naRouteFormEl) {
+        naRouteFormEl.style.display = naState.method === 'Find Optimal Route' ? 'flex' : 'none';
+      }
     }
 
     // ── Rebuild file inputs ──
@@ -425,6 +428,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         naFileInputsContainer.appendChild(rowWrapper);
       }
       styleRightPanelTree(wrapper);
+      if (naRouteFormEl) {
+        naRouteFormEl.style.display = naState.method === 'Find Optimal Route' ? 'flex' : 'none';
+      }
     }
 
     // ── Run Analysis ──

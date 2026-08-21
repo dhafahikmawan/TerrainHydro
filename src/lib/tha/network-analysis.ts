@@ -73,7 +73,8 @@ function coordId(lng: number, lat: number): string {
 
 /** Parse a node id back to [lng, lat]. */
 function parseCoordId(id: string): [number, number] {
-  const parts = id.split(',');
+  const cleanId = id.startsWith('snap:') ? id.slice(5) : id;
+  const parts = cleanId.split(',');
   return [parseFloat(parts[0]), parseFloat(parts[1])];
 }
 
@@ -446,8 +447,8 @@ function buildSnappedPointsGeoJSON(
 /**
  * Run the full network analysis pipeline:
  * 1. Build graph from layers.
- * 2. Apply obstacle filters.
- * 3. Snap start and destination to network.
+ * 2. Snap start and destination to network.
+ * 3. Apply obstacle filters.
  * 4. Run pathfinder.
  * 5. Return result GeoJSON.
  *
@@ -459,14 +460,14 @@ export function runNetworkAnalysis(params: AnalysisParams): AnalysisResult {
   // 1. Build graph
   const graph = buildGraph(layers, layerConfigs);
 
-  // 2. Apply obstacles
+  // 2. Snap start and destination (Do this before applying obstacles)
+  const startSnap = snapToNetwork(graph, start, snappingTolerance);
+  const destSnap = snapToNetwork(graph, destination, snappingTolerance);
+
+  // 3. Apply obstacles (Filter out blocked links including newly split ones)
   if (obstacles && obstacles.length > 0) {
     applyObstacles(graph, obstacles);
   }
-
-  // 3. Snap start and destination
-  const startSnap = snapToNetwork(graph, start, snappingTolerance);
-  const destSnap = snapToNetwork(graph, destination, snappingTolerance);
 
   // 4. Pathfind
   const nodeIds = runPathfinder(graph, startSnap.snappedNodeId, destSnap.snappedNodeId, isBenefit);
