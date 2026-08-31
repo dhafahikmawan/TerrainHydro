@@ -151,6 +151,50 @@ export const RIGHT_PANEL_STYLES: Record<string, RightPanelStyle> = {
     margin: "12px 0",
     backgroundColor: "#d1d5db",
   },
+  "wd-badge": {
+    display: "inline-block",
+    padding: "3px 8px",
+    borderRadius: "999px",
+    backgroundColor: "#e5e7eb",
+    color: "#374151",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+  "wd-badge--ok": { backgroundColor: "#dcfce7", color: "#166534" },
+  "wd-badge--error": { backgroundColor: "#fee2e2", color: "#991b1b" },
+  "wd-badge--running": { backgroundColor: "#dbeafe", color: "#1e40af" },
+  "wd-slider-control": {
+    display: "flex",
+    gap: "8px",
+    alignItems: "center",
+    width: "100%",
+    boxSizing: "border-box",
+  },
+  "wd-slider": {
+    flex: "1 1 auto",
+    minWidth: "0",
+  },
+  "wd-number-input": {
+    boxSizing: "border-box",
+    width: "82px",
+    minWidth: "82px",
+    maxWidth: "82px",
+    minHeight: "36px",
+    padding: "6px 8px",
+    border: "1px solid #b8c1cc",
+    borderRadius: "4px",
+    outline: "none",
+    backgroundColor: "#ffffff",
+    color: "#111827",
+    fontSize: "13px",
+    textAlign: "right",
+    flex: "0 0 82px",
+  },
+  "wd-stats-grid": { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" },
+  "wd-stat-item": { padding: "8px", border: "1px solid #d1d5db", borderRadius: "4px", backgroundColor: "#f9fafb" },
+  "wd-stat-label": { display: "block", color: "#6b7280", fontSize: "11px" },
+  "wd-stat-value": { display: "block", color: "#111827", fontSize: "14px", fontWeight: "600" },
+  "wd-progress": { padding: "8px", backgroundColor: "#eff6ff", color: "#1e3a8a", fontSize: "12px" },
 };
 
 export function applyRightPanelStyles(
@@ -186,8 +230,12 @@ function getRightPanelStyleRoles(element: Element, isRoot: boolean): string[] {
     roles.push("right-panel-option");
   } else if (tagName === "input") {
     const input = element as HTMLInputElement;
-    if (input.type === "checkbox" || input.type === "radio") {
+    if (input.type === "range" || classNames.includes("wd-slider")) {
+      roles.push("wd-slider");
+    } else if (input.type === "checkbox" || input.type === "radio") {
       roles.push("right-panel-checkbox");
+    } else if (classNames.includes("wd-number-input")) {
+      roles.push("wd-number-input");
     } else {
       roles.push("right-panel-control");
     }
@@ -237,6 +285,7 @@ function getRightPanelStyleRoles(element: Element, isRoot: boolean): string[] {
   if (classNames.includes("plugin-control-help")) {
     roles.push("right-panel-help");
   }
+  classNames.filter((className) => className.startsWith("wd-")).forEach((className) => roles.push(className));
 
   return roles;
 }

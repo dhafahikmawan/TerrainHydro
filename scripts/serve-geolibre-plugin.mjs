@@ -20,10 +20,16 @@ const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
+  [".mjs", "text/javascript; charset=utf-8"],
+  [".cjs", "text/javascript; charset=utf-8"],
+  [".ts", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
   [".map", "application/json; charset=utf-8"],
   [".txt", "text/plain; charset=utf-8"],
   [".zip", "application/zip"],
+  [".tif", "image/tiff"],
+  [".tiff", "image/tiff"],
+  [".geojson", "application/geo+json; charset=utf-8"],
 ]);
 
 const server = createServer(async (request, response) => {

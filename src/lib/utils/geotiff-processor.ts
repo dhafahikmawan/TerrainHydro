@@ -1,4 +1,4 @@
-import { fromBlob } from 'geotiff';
+import { fromArrayBuffer, fromBlob } from 'geotiff';
 
 /**
  * Represents the metadata and pixel data extracted from a GeoTIFF file.
@@ -21,8 +21,9 @@ export interface RasterSource {
  */
 export async function readRasterFromFile(file: File): Promise<RasterSource> {
   try {
-    // 1. Open the file blob
-    const tiff = await fromBlob(file);
+    // 1. Open the file using a buffer path when FileReader is unavailable.
+    const data = await file.arrayBuffer();
+    const tiff = typeof FileReader !== 'undefined' ? await fromBlob(file) : await fromArrayBuffer(data);
     const image = await tiff.getImage();
     const width = image.getWidth();
     const height = image.getHeight();

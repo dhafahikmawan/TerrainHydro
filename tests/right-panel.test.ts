@@ -9,6 +9,8 @@ import {
   registerTemplateRightPanel,
 } from "../src/lib/geolibre/right-panel";
 import { styleRightPanelTree } from "../src/lib/styles/right-panel-styles";
+import { writeFloat32TiledGeoTIFF } from "../src/lib/utils/geotiff-processor";
+import { runDelineation } from "../src/lib/tha/watershed-delineation";
 
 /**
  * Minimal stub of the host API. Captures the right-panel registration so the
@@ -51,7 +53,7 @@ describe("registerTemplateRightPanel", () => {
 
     const container = document.createElement("div");
     const cleanup = panel?.render(container);
-    expect(container.querySelector("h2")?.textContent).toBe("Plugin Workbench");
+    expect(container.querySelector("h2")?.textContent).toBe("Terrain & Hydrological Analysis Workbench");
 
     // The returned cleanup removes the plugin's own DOM.
     expect(cleanup).toBeTypeOf("function");
@@ -148,6 +150,89 @@ describe("registerTemplateRightPanel", () => {
     dispose?.();
     expect(app.closeRightPanel).toHaveBeenCalledWith(RIGHT_PANEL_ID);
     expect(unregister).toHaveBeenCalledOnce();
+  });
+
+  it("enables the watershed run button after a valid DEM upload", async () => {
+    const { app, getRegistered } = createApp();
+    registerTemplateRightPanel(app);
+
+    const panel = getRegistered();
+    const container = document.createElement("div");
+    panel?.render(container);
+
+    const methodSelect = container.querySelector("select") as HTMLSelectElement;
+    methodSelect.value = "Watershed Delineation";
+    methodSelect.dispatchEvent(new Event("change"));
+
+    const fileInput = Array.from(container.querySelectorAll('input[type="file"]')).find(
+      (input) => input.getAttribute("accept")?.includes(".tif"),
+    ) as HTMLInputElement;
+
+    const data = new Float32Array(10 * 10).fill(12.5);
+    const buffer = writeFloat32TiledGeoTIFF(10, 10, data, [0, 1, 0, 0, 0, -1], 3857, 1);
+    const file = new File([buffer], "sample.tif", { type: "image/tiff" });
+
+    Object.defineProperty(fileInput, "files", { value: [file], configurable: true });
+    fileInput.dispatchEvent(new Event("change"));
+
+    const runButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Run Analysis",
+    ) as HTMLButtonElement;
+
+    await vi.waitFor(() => {
+      expect(runButton).toBeTruthy();
+      expect(runButton.disabled).toBe(false);
+    });
+  });
+
+  it("keeps the watershed threshold slider and number input side by side without full-width overlap", () => {
+    const root = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "wd-slider-control";
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.className = "wd-slider";
+    const numberInput = document.createElement("input");
+    numberInput.type = "number";
+    numberInput.className = "wd-number-input";
+    row.append(slider, numberInput);
+    root.appendChild(row);
+
+    styleRightPanelTree(root);
+
+    expect(slider.style.flex).toBe("1 1 auto");
+    expect(numberInput.style.width).toBe("82px");
+    expect(numberInput.style.minWidth).toBe("82px");
+    expect(numberInput.style.maxWidth).toBe("82px");
+  });
+
+  it("falls back to direct delineation when the worker cannot initialize", async () => {
+    const originalWorker = globalThis.Worker;
+    // @ts-expect-error Test override
+    globalThis.Worker = class {
+      constructor() {
+        throw new Error("Invalid URL");
+      }
+    };
+
+    const result = await runDelineation(
+      {
+        width: 2,
+        height: 2,
+        data: new Float32Array([1, 2, 3, 4]),
+        geotransform: [0, 1, 0, 0, 0, -1],
+        crsCode: 3857,
+        noDataValue: -9999,
+        bandCount: 1,
+      },
+      { zLimit: 0, threshold: 1 },
+    );
+
+    expect(result).toHaveProperty("filledElevation");
+    expect(result).toHaveProperty("basinPolygons");
+    expect(result.basinPolygons.type).toBe("FeatureCollection");
+
+    globalThis.Worker = originalWorker;
   });
 
   it("returns null when the host has no right sidebar", () => {

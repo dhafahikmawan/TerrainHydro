@@ -1,7 +1,8 @@
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
 import type { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
 import { generateNDVI, generateNDWI, generateSlope } from "../tha/raster-analysis";
-import { getGeoTIFFBandCount } from "../utils/geotiff-processor";
+import { generateGeoTIFFBlobFromRaster, getGeoTIFFBandCount, readRasterFromFile, writeFloat32TiledGeoTIFF } from "../utils/geotiff-processor";
+import { clipAndComputeStats, runDelineation, type DemData, type DelineationResult } from "../tha/watershed-delineation";
 import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
 import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
@@ -15,14 +16,14 @@ export const BASE_METHODS = [
     "Raster Analysis",
     "Network Analysis",
     "Terrain & Hydrology Analysis",
-    //"Watershed Delineation",
+    "Watershed Delineation",
   ];
 export const BASE_METHODS_TC = [
   "Select Geoprocessing function",  //placeholder
   "Raster Analysis",
   "Network Analysis",
   "Terrain & Hydrology Analysis",
-  //"Watershed Delineation",
+  "Watershed Delineation",
 ]
 
 /**
@@ -782,6 +783,86 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         loadMethodForm(thaMethodForm, methodFunctionSelect.value);
         styleRightPanelTree(wrapper);
       })
+  }
+  else if(method === "Watershed Delineation"){
+    const section = (title: string) => { const element = document.createElement("section"); element.className = "right-panel-section"; const heading = document.createElement("h3"); heading.textContent = title; element.appendChild(heading); wrapper.appendChild(element); return element; };
+    const label = (text: string) => { const element = document.createElement("label"); element.textContent = text; return element; };
+    const status = document.createElement("div"); status.className = "wd-progress"; status.textContent = "Select a DEM to begin.";
+    let currentDem: DemData | null = null;
+    let currentResult: DelineationResult | null = null;
+    const download = (name: string, blob: Blob) => { const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href); };
+    const rasterBlob = (data: Float32Array, dem: DemData) => new Blob([writeFloat32TiledGeoTIFF(dem.width, dem.height, data, dem.geotransform, dem.crsCode, 1)], { type: "image/tiff" });
+    const setStatus = (message: string, error = false) => { status.textContent = message; status.className = `wd-progress ${error ? "wd-badge--error" : ""}`; };
+    const runButton = document.createElement("button"); runButton.type = "button"; runButton.textContent = "Run Analysis"; runButton.disabled = true;
+    const updateRunButtonState = () => { runButton.disabled = !currentDem; };
+
+    const inputSection = section("Input DEM");
+    const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.accept = ".tif,.tiff"; inputSection.appendChild(fileInput);
+    const metadata = document.createElement("div"); metadata.className = "right-panel-help"; inputSection.appendChild(metadata);
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) {
+        currentDem = null;
+        metadata.textContent = "";
+        updateRunButtonState();
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        currentDem = null;
+        updateRunButtonState();
+        setStatus("DEM exceeds the 50 MB limit.", true);
+        return;
+      }
+      try {
+        const dem = await readRasterFromFile(file);
+        if (dem.width * dem.height > 16777216 || dem.data.length !== dem.width * dem.height) {
+          currentDem = null;
+          updateRunButtonState();
+          setStatus("DEM exceeds the 4096 x 4096 single-band limit.", true);
+          return;
+        }
+        currentDem = dem; metadata.textContent = `${file.name} | ${dem.width} x ${dem.height} | ${(dem.width * dem.height).toLocaleString()} cells`;
+        if (_app.addCogLayer) await _app.addCogLayer("Source DEM", URL.createObjectURL(await generateGeoTIFFBlobFromRaster(file)), { colormap: "terrain", nodata: dem.noDataValue });
+        updateRunButtonState();
+        setStatus("DEM loaded. Ready to run analysis.");
+      } catch (error) {
+        currentDem = null;
+        updateRunButtonState();
+        setStatus(error instanceof Error ? error.message : "Unable to read DEM.", true);
+      }
+    });
+
+    const parameterSection = section("Delineation Parameters");
+    const zLimit = document.createElement("input"); zLimit.type = "number"; zLimit.min = "0"; zLimit.step = "0.1"; zLimit.value = "0";
+    parameterSection.append(label("Z-limit (0 = unlimited)"), zLimit);
+    const thresholdRow = document.createElement("div"); thresholdRow.className = "wd-slider-control";
+    const threshold = document.createElement("input"); threshold.type = "range"; threshold.min = "0"; threshold.max = "5000"; threshold.value = "500"; threshold.className = "wd-slider";
+    const thresholdNumber = document.createElement("input"); thresholdNumber.type = "number"; thresholdNumber.min = "0"; thresholdNumber.max = "5000"; thresholdNumber.value = "500"; thresholdNumber.className = "wd-number-input";
+    threshold.addEventListener("input", () => { thresholdNumber.value = threshold.value; }); thresholdNumber.addEventListener("input", () => { threshold.value = thresholdNumber.value; }); thresholdRow.append(threshold, thresholdNumber); parameterSection.append(label("Stream threshold"), thresholdRow);
+    parameterSection.append(runButton, status);
+    const resultActions = document.createElement("div"); resultActions.className = "right-panel-flex-column"; parameterSection.appendChild(resultActions);
+    runButton.addEventListener("click", async () => {
+      if (!currentDem) return;
+      runButton.disabled = true;
+      try {
+        currentResult = await runDelineation(currentDem, { zLimit: Number(zLimit.value) || 0, threshold: Number(thresholdNumber.value) || 0 }, (step, message) => setStatus(`Step ${step}: ${message}`));
+        if (_app.addCogLayer) {
+          await _app.addCogLayer("Sink-filled DEM", URL.createObjectURL(rasterBlob(currentResult.filledElevation, currentDem)), { colormap: "terrain", nodata: currentDem.noDataValue });
+          const logAccumulation = Float32Array.from(currentResult.flowAccumulation, value => Math.log1p(value));
+          await _app.addCogLayer("Flow Accumulation", URL.createObjectURL(rasterBlob(logAccumulation, currentDem)), { colormap: "blues" });
+          await _app.addCogLayer("Subbasins (Raster)", URL.createObjectURL(rasterBlob(Float32Array.from(currentResult.basinIdArray), currentDem)), { colormap: "rainbow", nodata: 0 });
+        }
+        _app.addGeoJsonLayer("Channel Network", currentResult.channelNetwork); _app.addGeoJsonLayer("Watershed Basins", currentResult.basinPolygons);
+        setStatus(`Analysis complete: ${currentResult.basinPolygons.features.length} basins found.`);
+        resultActions.textContent = "";
+        if (ENABLE_DOWNLOAD) { const filled = document.createElement("button"); filled.textContent = "Download filled DEM"; filled.onclick = () => download("filled-dem.tif", rasterBlob(currentResult!.filledElevation, currentDem!)); resultActions.appendChild(filled); const network = document.createElement("button"); network.textContent = "Download network GeoJSON"; network.onclick = () => download("network.geojson", new Blob([JSON.stringify(currentResult!.channelNetwork)], { type: "application/geo+json" })); resultActions.appendChild(network); }
+      } catch (error) { setStatus(error instanceof Error ? error.message : "Analysis failed.", true); } finally { runButton.disabled = false; }
+    });
+
+    const statsSection = section("Clip & Elevation Statistics"); const basinInput = document.createElement("input"); basinInput.type = "number"; basinInput.min = "1"; basinInput.placeholder = "Basin ID"; const clipButton = document.createElement("button"); clipButton.textContent = "Clip Basin"; const statsGrid = document.createElement("div"); statsGrid.className = "wd-stats-grid"; statsSection.append(label("Target basin ID"), basinInput, clipButton, statsGrid);
+    clipButton.addEventListener("click", () => { if (!currentDem || !currentResult) return; const selected = Number(basinInput.value); const clipped = clipAndComputeStats(currentDem.width, currentDem.height, currentResult.filledElevation, currentResult.basinIdArray, selected, currentDem.noDataValue); statsGrid.textContent = ""; for (const [name, value] of [["Min", clipped.statistics.min], ["Max", clipped.statistics.max], ["Mean", clipped.statistics.mean], ["Std dev", clipped.statistics.stdDev]] as [string, number][]) { const item = document.createElement("div"); item.className = "wd-stat-item"; const itemLabel = document.createElement("span"); itemLabel.className = "wd-stat-label"; itemLabel.textContent = name; const itemValue = document.createElement("span"); itemValue.className = "wd-stat-value"; itemValue.textContent = `${value.toFixed(2)} m`; item.append(itemLabel, itemValue); statsGrid.appendChild(item); } if (_app.addCogLayer) void _app.addCogLayer(`Clipped Basin DEM ${selected}`, URL.createObjectURL(rasterBlob(clipped.clippedElevation, currentDem)), { colormap: "terrain", nodata: currentDem.noDataValue }); });
+    const map = _app.getMap?.(); map?.on("click", (event: unknown) => { const feature = (event as { features?: Array<{ properties?: { basinId?: number } }> }).features?.[0]; if (feature?.properties?.basinId) { basinInput.value = String(feature.properties.basinId); clipButton.click(); } });
+    styleRightPanelTree(wrapper);
   }
   //Raster Analysis Forms
   else if(method === "Slope"){
@@ -1615,7 +1696,7 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
   // Open it right away so the example is visible on activation. Remove this call
   // (or gate it behind a button in your control) if you would rather open the
   // panel on demand instead of every time the plugin activates.
-  //app.openRightPanel?.(RIGHT_PANEL_ID);
+  app.openRightPanel?.(RIGHT_PANEL_ID);
 
   return () => {
     app.closeRightPanel?.(RIGHT_PANEL_ID);
