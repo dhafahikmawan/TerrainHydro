@@ -287,7 +287,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     // ── Build attribute dropdown ──
     function naBuildAttrDropdown(layerIdx: number, layerState: LayerState): HTMLSelectElement {
       const sel = document.createElement('select');
-      sel.className = 'na-input na-select';
+      applyRightPanelStyle(sel, "methodSelect");
       sel.id = `na-attr-${layerIdx}`;
       const distOpt = document.createElement('option');
       distOpt.value = 'Distance';
@@ -305,26 +305,26 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     }
     function naBuildLayerSubForm(layerIdx: number, layerState: LayerState): HTMLElement {
       const subForm = document.createElement('div');
-      subForm.className = 'na-layer-subform';
+      applyRightPanelStyle(subForm, "layerSubform");
       const row1 = document.createElement('div');
-      row1.className = 'na-form-row';
+      applyRightPanelStyle(row1, "formRow");
       const attrLabel = document.createElement('label');
       attrLabel.htmlFor = `na-attr-${layerIdx}`;
-      attrLabel.className = 'na-label';
+      applyRightPanelStyle(attrLabel, "label");
       attrLabel.textContent = 'Optimal Value';
       row1.appendChild(attrLabel);
       row1.appendChild(naBuildAttrDropdown(layerIdx, layerState));
       subForm.appendChild(row1);
       const row2 = document.createElement('div');
-      row2.className = 'na-form-row';
+      applyRightPanelStyle(row2, "formRow");
       const wLabel = document.createElement('label');
       wLabel.htmlFor = `na-weight-${layerIdx}`;
-      wLabel.className = 'na-label';
+      applyRightPanelStyle(wLabel, "label");
       wLabel.textContent = 'Weight';
       const weightInput = document.createElement('input');
       weightInput.type = 'number';
       weightInput.id = `na-weight-${layerIdx}`;
-      weightInput.className = 'na-input';
+      applyRightPanelStyle(weightInput, "input");
       weightInput.min = '0';
       weightInput.step = '0.1';
       weightInput.value = String(layerState.weight);
@@ -343,17 +343,17 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         const layerState = naState.layers[i];
         if (!layerState || !layerState.geojson) continue;
         const card = document.createElement('div');
-        card.className = 'na-layer-card';
+        applyRightPanelStyle(card, "layerCard");
         const checkRow = document.createElement('div');
-        checkRow.className = 'na-check-row';
+        applyRightPanelStyle(checkRow, "formRow");
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.id = `na-layer-cb-${i}`;
-        cb.className = 'na-checkbox';
+        applyRightPanelStyle(cb, "checkbox");
         cb.checked = layerState.checked;
         const cbLabel = document.createElement('label');
         cbLabel.htmlFor = `na-layer-cb-${i}`;
-        cbLabel.className = 'na-check-label';
+        applyRightPanelStyle(cbLabel, "checkLabel");
         cbLabel.textContent = layerState.file?.name ?? `Layer ${i + 1}`;
         checkRow.appendChild(cb);
         checkRow.appendChild(cbLabel);
@@ -384,18 +384,18 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       }
       for (let i = 0; i < naState.numLayers; i++) {
         const rowWrapper = document.createElement('div');
-        rowWrapper.className = 'na-file-row';
+        applyRightPanelStyle(rowWrapper, "formRow");
         const label = document.createElement('label');
         label.htmlFor = `na-file-${i}`;
-        label.className = 'na-label';
+        applyRightPanelStyle(label, "label");
         label.textContent = `Layer ${i + 1}`;
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = `na-file-${i}`;
-        fileInput.className = 'na-input na-file-input';
+        applyRightPanelStyle(fileInput, "input");
         fileInput.accept = '.geojson,application/json';
         const statusSpan = document.createElement('span');
-        statusSpan.className = 'na-file-status';
+        applyRightPanelStyle(statusSpan, "status");
         statusSpan.id = `na-file-status-${i}`;
         fileInput.addEventListener('change', async () => {
           const file = fileInput.files?.[0] ?? null;
@@ -512,27 +512,27 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // ── Build the Network Analysis form UI ──
     const naWrap = document.createElement('div');
-    naWrap.className = 'network-analysis-panel';
+    applyRightPanelStyle(naWrap, "panel");
 
     // -- Section: Configuration --
     const naConfigSection = document.createElement('div');
-    naConfigSection.className = 'na-section';
+    applyRightPanelStyle(naConfigSection, "section");
     const naConfigTitle = document.createElement('h3');
-    naConfigTitle.className = 'na-section-title';
+    applyRightPanelStyle(naConfigTitle, "heading");
     naConfigTitle.textContent = 'Configuration';
     naConfigSection.appendChild(naConfigTitle);
 
     // Number of layers
     const naLayerCountRow = document.createElement('div');
-    naLayerCountRow.className = 'na-form-row';
+    applyRightPanelStyle(naLayerCountRow, "formRow");
     const naLayerCountLabel = document.createElement('label');
     naLayerCountLabel.htmlFor = 'na-num-layers';
-    naLayerCountLabel.className = 'na-label';
+    applyRightPanelStyle(naLayerCountLabel, "label");
     naLayerCountLabel.textContent = 'Number of Network Layers';
     const naLayerCountInput = document.createElement('input');
     naLayerCountInput.type = 'number';
     naLayerCountInput.id = 'na-num-layers';
-    naLayerCountInput.className = 'na-input na-input--small';
+    applyRightPanelStyle(naLayerCountInput, "input");
     naLayerCountInput.min = '1';
     naLayerCountInput.max = String(MAX_LAYERS);
     naLayerCountInput.value = '1';
@@ -550,19 +550,19 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // File inputs container
     naFileInputsContainer = document.createElement('div');
-    naFileInputsContainer.className = 'na-file-inputs';
+    applyRightPanelStyle(naFileInputsContainer, "formContainer");
     naConfigSection.appendChild(naFileInputsContainer);
 
     // Analysis method select
     const naMethodRow = document.createElement('div');
-    naMethodRow.className = 'na-form-row';
+    applyRightPanelStyle(naMethodRow, "formRow");
     const naMethodLabel = document.createElement('label');
     naMethodLabel.htmlFor = 'na-method';
-    naMethodLabel.className = 'na-label';
+    applyRightPanelStyle(naMethodLabel, "label");
     naMethodLabel.textContent = 'Analysis Method';
     const naMethodSelect = document.createElement('select');
     naMethodSelect.id = 'na-method';
-    naMethodSelect.className = 'na-input na-select';
+    applyRightPanelStyle(naMethodSelect, "methodSelect");
     const naEmptyOpt = document.createElement('option');
     naEmptyOpt.value = '';
     naEmptyOpt.textContent = '\u2014 Select method \u2014';
@@ -583,29 +583,29 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // -- Section: Optimal Route Parameters --
     naRouteFormEl = document.createElement('div');
-    naRouteFormEl.className = 'na-section na-route-form';
+    applyRightPanelStyle(naRouteFormEl, "section");
     naRouteFormEl.style.display = 'none';
     const naRouteTitle = document.createElement('h3');
-    naRouteTitle.className = 'na-section-title';
+    applyRightPanelStyle(naRouteTitle, "heading");
     naRouteTitle.textContent = 'Optimal Route Parameters';
     naRouteFormEl.appendChild(naRouteTitle);
 
     // Start coordinate
     const naStartRow = document.createElement('div');
-    naStartRow.className = 'na-form-row na-coord-row';
+    applyRightPanelStyle(naStartRow, "formRow");
     const naStartLabel = document.createElement('label');
     naStartLabel.htmlFor = 'na-start-coord';
-    naStartLabel.className = 'na-label';
+    applyRightPanelStyle(naStartLabel, "label");
     naStartLabel.textContent = 'Start';
     naStartInput = document.createElement('input');
     naStartInput.type = 'text';
     naStartInput.id = 'na-start-coord';
-    naStartInput.className = 'na-input na-coord-input';
+    applyRightPanelStyle(naStartInput, "input");
     naStartInput.readOnly = true;
     naStartInput.placeholder = 'Click "Pick on Map"';
     naPickStartBtn = document.createElement('button');
     naPickStartBtn.type = 'button';
-    naPickStartBtn.className = 'na-pick-btn';
+    applyRightPanelStyle(naPickStartBtn, "button");
     naPickStartBtn.id = 'na-pick-start';
     naPickStartBtn.title = 'Pick start point on map';
     naPickStartBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg> Pick';
@@ -617,20 +617,20 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Destination coordinate
     const naDestRow = document.createElement('div');
-    naDestRow.className = 'na-form-row na-coord-row';
+    applyRightPanelStyle(naDestRow, "formRow");
     const naDestLabel = document.createElement('label');
     naDestLabel.htmlFor = 'na-dest-coord';
-    naDestLabel.className = 'na-label';
+    applyRightPanelStyle(naDestLabel, "label");
     naDestLabel.textContent = 'Destination';
     naDestInput = document.createElement('input');
     naDestInput.type = 'text';
     naDestInput.id = 'na-dest-coord';
-    naDestInput.className = 'na-input na-coord-input';
+    applyRightPanelStyle(naDestInput, "input");
     naDestInput.readOnly = true;
     naDestInput.placeholder = 'Click "Pick on Map"';
     naPickDestBtn = document.createElement('button');
     naPickDestBtn.type = 'button';
-    naPickDestBtn.className = 'na-pick-btn';
+    applyRightPanelStyle(naPickDestBtn, "button");
     naPickDestBtn.id = 'na-pick-dest';
     naPickDestBtn.title = 'Pick destination point on map';
     naPickDestBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg> Pick';
@@ -642,15 +642,15 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Snapping tolerance
     const naSnapRow = document.createElement('div');
-    naSnapRow.className = 'na-form-row';
+    applyRightPanelStyle(naSnapRow, "formRow");
     const naSnapLabel = document.createElement('label');
     naSnapLabel.htmlFor = 'na-snap-tolerance';
-    naSnapLabel.className = 'na-label';
+    applyRightPanelStyle(naSnapLabel, "label");
     naSnapLabel.textContent = 'Snapping Tolerance (m)';
     const naSnapInput = document.createElement('input');
     naSnapInput.type = 'number';
     naSnapInput.id = 'na-snap-tolerance';
-    naSnapInput.className = 'na-input na-input--small';
+    applyRightPanelStyle(naSnapInput, "input");
     naSnapInput.min = '0';
     naSnapInput.step = '1';
     naSnapInput.value = '0';
@@ -665,25 +665,25 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Layer checklist title
     const naLayerListTitle = document.createElement('p');
-    naLayerListTitle.className = 'na-sublabel';
+    applyRightPanelStyle(naLayerListTitle, "description");
     naLayerListTitle.textContent = 'Select Layers to Include in Analysis';
     naRouteFormEl.appendChild(naLayerListTitle);
 
     naLayerListEl = document.createElement('div');
-    naLayerListEl.className = 'na-layer-list';
+    applyRightPanelStyle(naLayerListEl, "layerList");
     naRouteFormEl.appendChild(naLayerListEl);
 
     // Obstacles file input
     const naObstacleRow = document.createElement('div');
-    naObstacleRow.className = 'na-form-row';
+    applyRightPanelStyle(naObstacleRow, "formRow");
     const naObstacleLabel = document.createElement('label');
     naObstacleLabel.htmlFor = 'na-obstacles';
-    naObstacleLabel.className = 'na-label';
+    applyRightPanelStyle(naObstacleLabel, "label");
     naObstacleLabel.textContent = 'Obstacles (optional)';
     const naObstacleInput = document.createElement('input');
     naObstacleInput.type = 'file';
     naObstacleInput.id = 'na-obstacles';
-    naObstacleInput.className = 'na-input na-file-input';
+    applyRightPanelStyle(naObstacleInput, "input");
     naObstacleInput.accept = '.geojson,application/json';
     naObstacleInput.multiple = true;
     naObstacleInput.addEventListener('change', async () => {
@@ -704,29 +704,29 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Optimization goal (radio)
     const naGoalRow = document.createElement('div');
-    naGoalRow.className = 'na-form-row na-radio-row';
+    applyRightPanelStyle(naGoalRow, "formRow");
     const naGoalLabel = document.createElement('span');
-    naGoalLabel.className = 'na-label';
+    applyRightPanelStyle(naGoalLabel, "label");
     naGoalLabel.textContent = 'Optimization Goal';
     const naRadioGroup = document.createElement('div');
-    naRadioGroup.className = 'na-radio-group';
+    applyRightPanelStyle(naRadioGroup, "averagingGroup");
     const naCostLabel = document.createElement('label');
-    naCostLabel.className = 'na-radio-label';
+    applyRightPanelStyle(naCostLabel, "radioLabel");
     const naCostRadio = document.createElement('input');
     naCostRadio.type = 'radio';
     naCostRadio.name = 'na-goal';
     naCostRadio.value = 'cost';
     naCostRadio.checked = true;
-    naCostRadio.className = 'na-radio';
+    applyRightPanelStyle(naCostRadio, "radio");
     naCostLabel.appendChild(naCostRadio);
     naCostLabel.append(' Cost');
     const naBenefitLabel = document.createElement('label');
-    naBenefitLabel.className = 'na-radio-label';
+    applyRightPanelStyle(naBenefitLabel, "radioLabel");
     const naBenefitRadio = document.createElement('input');
     naBenefitRadio.type = 'radio';
     naBenefitRadio.name = 'na-goal';
     naBenefitRadio.value = 'benefit';
-    naBenefitRadio.className = 'na-radio';
+    applyRightPanelStyle(naBenefitRadio, "radio");
     naBenefitLabel.appendChild(naBenefitRadio);
     naBenefitLabel.append(' Benefit');
     naCostRadio.addEventListener('change', () => { naState.isBenefit = false; });
@@ -740,18 +740,18 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // -- Section: Actions --
     const naActionsSection = document.createElement('div');
-    naActionsSection.className = 'na-section na-actions';
+    applyRightPanelStyle(naActionsSection, "section");
 
     naAnalyzeBtn = document.createElement('button');
     naAnalyzeBtn.type = 'button';
     naAnalyzeBtn.id = 'na-analyze-btn';
-    naAnalyzeBtn.className = 'na-btn na-btn--primary';
+    applyRightPanelStyle(naAnalyzeBtn, "operationButton");
     naAnalyzeBtn.textContent = 'Find Optimal Route';
     naAnalyzeBtn.disabled = true;
     naAnalyzeBtn.addEventListener('click', () => { void naRunAnalysis(); });
 
     naStatusEl = document.createElement('div');
-    naStatusEl.className = 'na-status';
+    applyRightPanelStyle(naStatusEl, "status");
     naStatusEl.id = 'na-status';
 
     naActionsSection.appendChild(naAnalyzeBtn);
@@ -760,7 +760,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       naDownloadBtn = document.createElement('button');
       naDownloadBtn.type = 'button';
       naDownloadBtn.id = 'na-download-btn';
-      naDownloadBtn.className = 'na-btn na-btn--secondary';
+      applyRightPanelStyle(naDownloadBtn, "button");
       naDownloadBtn.textContent = 'Download Route';
       naDownloadBtn.style.display = 'none';
       naDownloadBtn.addEventListener('click', () => naDownloadRoute());
@@ -792,9 +792,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   else if(method === "Watershed Delineation"){
     const section = (title: string) => { 
       const element = document.createElement("section"); 
-      element.className = "spazio-section"; 
+      applyRightPanelStyle(element, "section");
       const heading = document.createElement("h3"); 
-      heading.className = "spazio-title"; 
+      applyRightPanelStyle(heading, "heading");
       heading.textContent = title; 
       element.appendChild(heading); 
       wrapper.appendChild(element); 
@@ -802,12 +802,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     };
     const label = (text: string) => { 
       const element = document.createElement("label"); 
-      element.className = "spazio-input-label"; 
+      applyRightPanelStyle(element, "label");
       element.textContent = text; 
       return element; 
     };
     const status = document.createElement("div"); 
-    status.className = "spazio-wd-progress"; 
+    applyRightPanelStyle(status, "wdProgress");
     status.textContent = "Select a DEM to begin.";
     // {lang:id} Pilih DEM untuk memulai
     let currentDem: DemData | null = null;
@@ -815,11 +815,13 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     //const download = (name: string, blob: Blob) => { const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href); };
     const rasterBlob = (data: Float32Array, dem: DemData) => new Blob([writeFloat32TiledGeoTIFF(dem.width, dem.height, data, dem.geotransform, dem.crsCode, 1)], { type: "image/tiff" });
     const setStatus = (message: string, error = false) => { 
-      status.textContent = message; 
-      status.className = `spazio-wd-progress ${error ? "spazio-wd-badge-error" : ""}`; 
+      status.textContent = message;
+      status.classList.remove("spazio-wd-badge-error");
+      if (error) status.classList.add("spazio-wd-badge-error");
     };
     const runButton = document.createElement("button"); 
     runButton.type = "button"; 
+    applyRightPanelStyle(runButton, "operationButton");
     runButton.textContent = "Run Analysis"; 
     // {lang:id} Lakukan Analisis
     runButton.disabled = true;
@@ -827,7 +829,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const inputSection = section("Input DEM");
     const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.accept = ".tif,.tiff"; inputSection.appendChild(fileInput);
-    const metadata = document.createElement("div"); metadata.className = "spazio-input-description"; inputSection.appendChild(metadata);
+    const metadata = document.createElement("div"); applyRightPanelStyle(metadata, "inputDescription"); inputSection.appendChild(metadata);
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files?.[0];
       if (!file) {
@@ -863,14 +865,14 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     });
 
     const parameterSection = section("Delineation Parameters");
-    const zLimit = document.createElement("input"); zLimit.type = "number"; zLimit.min = "0"; zLimit.step = "0.1"; zLimit.value = "0";
+    const zLimit = document.createElement("input"); zLimit.type = "number"; zLimit.min = "0"; zLimit.step = "0.1"; zLimit.value = "0"; applyRightPanelStyle(zLimit, "input");
     parameterSection.append(label("Z-limit (0 = unlimited)"), zLimit);
-    const thresholdRow = document.createElement("div"); thresholdRow.className = "spazio-wd-slider-control";
-    const threshold = document.createElement("input"); threshold.type = "range"; threshold.min = "0"; threshold.max = "5000"; threshold.value = "500"; threshold.className = "spazio-slider";
-    const thresholdNumber = document.createElement("input"); thresholdNumber.type = "number"; thresholdNumber.min = "0"; thresholdNumber.max = "5000"; thresholdNumber.value = "500"; thresholdNumber.className = "spazio-wd-number-input";
+    const thresholdRow = document.createElement("div"); applyRightPanelStyle(thresholdRow, "wdSliderControl");
+    const threshold = document.createElement("input"); threshold.type = "range"; threshold.min = "0"; threshold.max = "5000"; threshold.value = "500"; applyRightPanelStyle(threshold, "range");
+    const thresholdNumber = document.createElement("input"); thresholdNumber.type = "number"; thresholdNumber.min = "0"; thresholdNumber.max = "5000"; thresholdNumber.value = "500"; applyRightPanelStyle(thresholdNumber, "wdNumberInput");
     threshold.addEventListener("input", () => { thresholdNumber.value = threshold.value; }); thresholdNumber.addEventListener("input", () => { threshold.value = thresholdNumber.value; }); thresholdRow.append(threshold, thresholdNumber); parameterSection.append(label("Stream threshold"), thresholdRow);
     parameterSection.append(runButton, status);
-    const resultActions = document.createElement("div"); resultActions.className = "spazio-flex-col"; parameterSection.appendChild(resultActions);
+    const resultActions = document.createElement("div"); applyRightPanelStyle(resultActions, "flexCol"); parameterSection.appendChild(resultActions);
     runButton.addEventListener("click", async () => {
       if (!currentDem) return;
       runButton.disabled = true;
@@ -898,11 +900,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     basinInput.type = "number"; 
     basinInput.min = "1"; 
     basinInput.placeholder = "Basin ID"; 
-    const clipButton = document.createElement("button"); 
+    const clipButton = document.createElement("button");
+    applyRightPanelStyle(clipButton, "operationButton");
     clipButton.textContent = "Clip Basin"; 
     // {lang:id} Potong Basin?
     const statsGrid = document.createElement("div"); 
-    statsGrid.className = "wd-stats-grid"; 
+    applyRightPanelStyle(statsGrid, "wdStatsGrid"); 
     statsSection.append(label("Target basin ID"), basinInput, clipButton, statsGrid);
     clipButton.addEventListener("click", () => {
       if (!currentDem || !currentResult) return;
@@ -920,12 +923,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       ];
       for (const [name, value, isElevation] of statRows) {
         const item = document.createElement("div");
-        item.className = "spazio-wd-stat-item";
+        applyRightPanelStyle(item, "wdStatItem");
         const itemLabel = document.createElement("span");
-        itemLabel.className = "spazio-wd-stat-label";
+        applyRightPanelStyle(itemLabel, "wdStatLabel");
         itemLabel.textContent = name;
         const itemValue = document.createElement("span");
-        itemValue.className = "spazio-wd-stat-value";
+        applyRightPanelStyle(itemValue, "wdStatValue");
         itemValue.textContent = isElevation ? `${value.toFixed(2)} m` : value.toLocaleString();
         item.append(itemLabel, itemValue);
         statsGrid.appendChild(item);
@@ -954,16 +957,16 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   //Raster Analysis Forms
   else if(method === "Slope"){
     const fileInputLabel = document.createElement("h2");
-    fileInputLabel.className = "spazio-title";
+    applyRightPanelStyle(fileInputLabel, "heading");
     fileInputLabel.textContent = "DEM Raster";
     wrapper.appendChild(fileInputLabel);
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".tiff, .tif";
-    fileInput.className ="spazio-text-field";
+    applyRightPanelStyle(fileInput, "input");
     wrapper.appendChild(fileInput);
     const unitSelectLabel = document.createElement("h2");
-    unitSelectLabel.className = "spazio-title";
+    applyRightPanelStyle(unitSelectLabel, "heading");
     unitSelectLabel.textContent = "Select Slope Unit";
     // {lang:id} Pilih unit kemiringan
     const unitSelect = document.createElement("select");
@@ -979,7 +982,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const processingButton = document.createElement("button");
     processingButton.type = "button";
-    processingButton.className = "spazio-submit-button";
+    applyRightPanelStyle(processingButton, "operationButton");
     processingButton.textContent = "Generate Slope";
     // {lang:id} Buat Kemiringan
     wrapper.appendChild(processingButton);
@@ -1002,32 +1005,36 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   // (nir-red)/(nir+red)
   else if(method === "NDVI"){
     const fileInputALabel = document.createElement("h1");
+    applyRightPanelStyle(fileInputALabel, "heading");
     fileInputALabel.textContent = "NIR Raster";
     wrapper.appendChild(fileInputALabel);
     const fileInputA = document.createElement("input");
     fileInputA.type = "file";
     fileInputA.accept = ".tiff, .tif";
-    fileInputA.className ="spatio-file-input";
+    applyRightPanelStyle(fileInputA, "input");
     wrapper.appendChild(fileInputA);
     const nirSelectLabel = document.createElement("h1");
+    applyRightPanelStyle(nirSelectLabel, "heading");
     nirSelectLabel.textContent = 'Select raster band for "NIR"';
     wrapper.appendChild(nirSelectLabel)
     const nirSelect = document.createElement("select");
+    applyRightPanelStyle(nirSelect, "methodSelect");
     wrapper.appendChild(nirSelect);
     const fileInputBLabel = document.createElement("h2");
-    fileInputBLabel.className = "spazio-title";
+    applyRightPanelStyle(fileInputBLabel, "heading");
     fileInputBLabel.textContent = "Red Raster";
     wrapper.appendChild(fileInputBLabel);
     const fileInputB = document.createElement("input");
     fileInputB.type = "file";
     fileInputB.accept = ".tiff, .tif";
-    fileInputB.className ="spatio-file-input";
+    applyRightPanelStyle(fileInputB, "input");
     wrapper.appendChild(fileInputB);
     const redSelectLabel = document.createElement("h2");
-    redSelectLabel.className = "spazio-title";
+    applyRightPanelStyle(redSelectLabel, "heading");
     redSelectLabel.textContent = 'Select raster band for "Red"';
     wrapper.appendChild(redSelectLabel);
     const redSelect = document.createElement("select");
+    applyRightPanelStyle(redSelect, "methodSelect");
     wrapper.appendChild(redSelect);
     fileInputA.addEventListener('change', async () =>{
       const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
@@ -1039,7 +1046,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     });
     const actionButton = document.createElement("button");
     actionButton.type = "button";
-    actionButton.className = "spatio-action-button";
+    applyRightPanelStyle(actionButton, "operationButton");
     actionButton.textContent = "Generate NDVI";
     // {lang:id} Buat NDVI
     wrapper.appendChild(actionButton);
@@ -1065,32 +1072,36 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   //(Green - NIR)/(Green + NIR)
   else if(method === "NDWI"){
     const fileInputALabel = document.createElement("h1");
+    applyRightPanelStyle(fileInputALabel, "heading");
     fileInputALabel.textContent = "NIR Raster";
     wrapper.appendChild(fileInputALabel);
     const fileInputA = document.createElement("input");
     fileInputA.type = "file";
     fileInputA.accept = ".tiff, .tif";
-    fileInputA.className ="spatio-file-input";
+    applyRightPanelStyle(fileInputA, "input");
     wrapper.appendChild(fileInputA);
     const nirSelectLabel = document.createElement("h1");
+    applyRightPanelStyle(nirSelectLabel, "heading");
     nirSelectLabel.textContent = 'Select raster band for "NIR"';
     wrapper.appendChild(nirSelectLabel)
     const nirSelect = document.createElement("select");
+    applyRightPanelStyle(nirSelect, "methodSelect");
     wrapper.appendChild(nirSelect);
     const fileInputBLabel = document.createElement("h2");
-    fileInputBLabel.className = "spazio-title";
+    applyRightPanelStyle(fileInputBLabel, "heading");
     fileInputBLabel.textContent = "Green Raster";
     wrapper.appendChild(fileInputBLabel);
     const fileInputB = document.createElement("input");
     fileInputB.type = "file";
     fileInputB.accept = ".tiff, .tif";
-    fileInputB.className ="spatio-file-input";
+    applyRightPanelStyle(fileInputB, "input");
     wrapper.appendChild(fileInputB);
     const greenSelectLabel = document.createElement("h2");
-    greenSelectLabel.className = "spazio-title";
+    applyRightPanelStyle(greenSelectLabel, "heading");
     greenSelectLabel.textContent = 'Select raster band for "Green"';
     wrapper.appendChild(greenSelectLabel);
     const greenSelect = document.createElement("select");
+    applyRightPanelStyle(greenSelect, "methodSelect");
     wrapper.appendChild(greenSelect);
     fileInputA.addEventListener('change', async () =>{
       const bands = fileInputA.files ? await getGeoTIFFBandCount(fileInputA.files?.[0]) : 0;
@@ -1102,7 +1113,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     });
     const actionButton = document.createElement("button");
     actionButton.type = "button";
-    actionButton.className = "spatio-action-button";
+    applyRightPanelStyle(actionButton, "operationButton");
     actionButton.textContent = "Generate NDWI";
     // {lang:id} Buat NDWI
     wrapper.appendChild(actionButton);
@@ -1138,19 +1149,19 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Form elements
     const form = document.createElement("div");
-    form.className = "spazio-form-container";
+    applyRightPanelStyle(form, "formContainer");
 
     const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
       const field = document.createElement("div");
-      field.className = "spazio-section";
+      applyRightPanelStyle(field, "section");
       const label = document.createElement("label");
-      label.className = "spazio-input-label";
+      applyRightPanelStyle(label, "label");
       label.textContent = labelText;
       field.appendChild(label);
       field.appendChild(input);
       if (helpText) {
         const hint = document.createElement("div");
-        hint.className = "spazio-input-description";
+        applyRightPanelStyle(hint, "inputDescription");
         hint.textContent = helpText;
         field.appendChild(hint);
       }
@@ -1158,7 +1169,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     };
 
     const statusEl = document.createElement("div");
-    statusEl.className = "spazio-status";
+    applyRightPanelStyle(statusEl, "status");
     statusEl.textContent = "";
 
     const setStatus = (msg: string) => {
@@ -1167,34 +1178,35 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // 1. Input Layer Choice
     const inputWrapper = document.createElement("div");
-    inputWrapper.className = "spazio-flex-col";
+    applyRightPanelStyle(inputWrapper, "flexCol");
 
     const inputFileInput = document.createElement("input");
     inputFileInput.type = "file";
     inputFileInput.accept = ".geojson,.json";
-    inputFileInput.className = "spazio-text-field";
+    applyRightPanelStyle(inputFileInput, "input");
 
     const inputNameInput = document.createElement("input");
     inputNameInput.type = "text";
-    inputNameInput.className = "spazio-text-field";
+    applyRightPanelStyle(inputNameInput, "input");
     inputNameInput.placeholder = "Input layer name";
 
     const inputLoadBtn = document.createElement("button");
     inputLoadBtn.type = "button";
-    inputLoadBtn.className = "spazio-submit-button";
+    applyRightPanelStyle(inputLoadBtn, "operationButton");
     inputLoadBtn.textContent = "Load Input";
     // {lang:id} Muat Input
 
     const inputRow = document.createElement("div");
-    inputRow.className = "spazio-flex-row";
+    applyRightPanelStyle(inputRow, "flexRow");
     inputRow.appendChild(inputNameInput);
     inputRow.appendChild(inputLoadBtn);
     inputWrapper.appendChild(inputFileInput);
     inputWrapper.appendChild(inputRow);
 
     const inputStatusText = document.createElement("div");
-    inputStatusText.className = "spazio-status";
+    //inputStatusText.className = "spazio-status";
     inputStatusText.textContent = "No input layer loaded";
+    applyRightPanelStyle(inputStatusText, "status");
     // {lang:id} Tidak ada layer input yang termuat
 
     // 2. Buffer distance & units
@@ -1203,10 +1215,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     distanceInput.min = "0";
     distanceInput.step = "0.1";
     distanceInput.value = "1";
-    distanceInput.className = "spazio-text-field";
+    //distanceInput.className = "spazio-text-field";
+    applyRightPanelStyle(distanceInput, "input");
 
     const unitSelect = document.createElement("select");
-    unitSelect.className = "spazio-dropdown";
+    //unitSelect.className = "spazio-dropdown";
+    applyRightPanelStyle(unitSelect, "methodSelect");
     unitSelect.innerHTML = `
       <option value="kilometers">Kilometers</option>
       <option value="meters">Meters</option>
@@ -1215,50 +1229,59 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const bufferBtn = document.createElement("button");
     bufferBtn.type = "button";
-    bufferBtn.className = "spazio-submit-button";
+    //bufferBtn.className = "spazio-submit-button";
+    applyRightPanelStyle(bufferBtn, "button");
     bufferBtn.textContent = "Buffer Only";
     // {lang:id} Hanya Buffer
     bufferBtn.disabled = true;
 
     // 3. Join Layer Choice
     const joinWrapper = document.createElement("div");
-    joinWrapper.className = "spazio-flex-col";
+    //joinWrapper.className = "spazio-flex-col";
+    applyRightPanelStyle(joinWrapper, "flexCol");
 
     const joinFileInput = document.createElement("input");
     joinFileInput.type = "file";
     joinFileInput.accept = ".geojson,.json";
-    joinFileInput.className = "spazio-text-field";
+    applyRightPanelStyle(joinFileInput, "input");
+    //joinFileInput.className = "spazio-text-field";
 
     const joinNameInput = document.createElement("input");
     joinNameInput.type = "text";
-    joinNameInput.className = "spazio-text-field";
+    applyRightPanelStyle(joinNameInput, "input");
+    //joinNameInput.className = "spazio-text-field";
     joinNameInput.placeholder = "Join layer name";
 
     const joinLoadBtn = document.createElement("button");
     joinLoadBtn.type = "button";
-    joinLoadBtn.className = "spazio-submit-button";
+    //joinLoadBtn.className = "spazio-submit-button";
+    applyRightPanelStyle(joinLoadBtn, "button");
     joinLoadBtn.textContent = "Load Join";
     // {lang:id} Muat layer penggabungan
 
     const joinRow = document.createElement("div");
-    joinRow.className = "spazio-flex-row";
+    //joinRow.className = "spazio-flex-row";
+    applyRightPanelStyle(joinRow, "flexRow");
     joinRow.appendChild(joinNameInput);
     joinRow.appendChild(joinLoadBtn);
     joinWrapper.appendChild(joinFileInput);
     joinWrapper.appendChild(joinRow);
 
     const joinStatusText = document.createElement("div");
-    joinStatusText.className = "spazio-status";
+    applyRightPanelStyle(joinStatusText, "status");
+    //joinStatusText.className = "spazio-status";
     joinStatusText.textContent = "No join layer loaded";
     // {lang:id} Tidak ada layer penggabungan yang termuat
 
     // 4. Summarization configurations
     const joinAttributeSelect = document.createElement("select");
-    joinAttributeSelect.className = "spazio-dropdown";
+    applyRightPanelStyle(joinAttributeSelect, "methodSelect");
+    //joinAttributeSelect.className = "spazio-dropdown";
     joinAttributeSelect.disabled = true;
 
     const relationshipSelect = document.createElement("select");
-    relationshipSelect.className = "spazio-dropdown";
+    applyRightPanelStyle(relationshipSelect, "methodSelect");
+    //relationshipSelect.className = "spazio-dropdown";
     relationshipSelect.innerHTML = `
       <option value="intersects">Intersects</option>
       <option value="within">Within</option>
@@ -1266,7 +1289,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     `;
 
     const joinTypeSelect = document.createElement("select");
-    joinTypeSelect.className = "spazio-dropdown";
+    applyRightPanelStyle(joinTypeSelect, "methodSelect");
+    //joinTypeSelect.className = "spazio-dropdown";
     joinTypeSelect.innerHTML = `
       <option value="inner">Inner Join</option>
       <option value="left">Left Join</option>
@@ -1274,13 +1298,15 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const outputNameInput = document.createElement("input");
     outputNameInput.type = "text";
-    outputNameInput.className = "spazio-text-field";
+    //outputNameInput.className = "spazio-text-field";
+    applyRightPanelStyle(outputNameInput, "input");
     outputNameInput.placeholder = "Analysis Results";
     outputNameInput.value = "Hazard Vulnerability Output";
 
     const analyzeBtn = document.createElement("button");
     analyzeBtn.type = "button";
-    analyzeBtn.className = "spazio-submit-button";
+    applyRightPanelStyle(analyzeBtn, "operationButton")
+    //analyzeBtn.className = "spazio-submit-button";
     analyzeBtn.textContent = "Run Analysis";
     // {lang:id} Jalankan Analisis
     analyzeBtn.disabled = true;
@@ -1416,7 +1442,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     form.appendChild(createField("Buffer Units", unitSelect));
 
     const bufRow = document.createElement("div");
-    bufRow.className = "spazio-flex-row";
+    applyRightPanelStyle(bufRow, "flexRow");
+    //bufRow.className = "spazio-flex-row";
     bufRow.appendChild(bufferBtn);
     form.appendChild(bufRow);
 
@@ -1436,20 +1463,20 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   else if(method ==="Hazard Resistance Analysis"){
     const app = _app;
     const form = document.createElement("form");
-    form.className = "spazio-form-container";
+    applyRightPanelStyle(form, "formContainer");
 
     // ── createField helper (scoped to this block) ──
     const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
       const field = document.createElement("div");
-      field.className = "spazio-section";
+      applyRightPanelStyle(field, "section");
       const label = document.createElement("label");
-      label.className = "spazio-input-label";
+      applyRightPanelStyle(label, "label");
       label.textContent = labelText;
       field.appendChild(label);
       field.appendChild(input);
       if (helpText) {
         const hint = document.createElement("div");
-        hint.className = "spazio-input-description";
+        applyRightPanelStyle(hint, "inputDescription");
         hint.textContent = helpText;
         field.appendChild(hint);
       }
@@ -1461,7 +1488,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const inputLayerInput = document.createElement("input");
     inputLayerInput.type = "file";
     inputLayerInput.accept = ".geojson,.json,application/geo+json";
-    inputLayerInput.className = "spazio-text-field";
+    applyRightPanelStyle(inputLayerWrapper, "input");
+    //inputLayerInput.className = "spazio-text-field";
     inputLayerWrapper.appendChild(inputLayerInput);
 
     // ── Data Layers Count Field ──
@@ -1471,7 +1499,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     countInput.min = "0";
     countInput.max = "10";
     countInput.value = "0";
-    countInput.className = "spazio-text-field";
+    applyRightPanelStyle(countInput, "input")
+    //countInput.className = "spazio-text-field";
     countWrapper.appendChild(countInput);
 
     // ── Container for dynamic data layers file inputs ──
@@ -1480,7 +1509,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     // ── Method Selector (AND / OR) ──
     const methodWrapper = document.createElement("div");
     const methodSelect = document.createElement("select");
-    methodSelect.className = "spazio-dropdown";
+    applyRightPanelStyle(methodSelect, "methodSelect")
+    //methodSelect.className = "spazio-dropdown";
     drawDropdownOptions(methodSelect, ["OR", "AND"], ["OR (Union)", "AND (Intersection)"]);
     methodWrapper.appendChild(methodSelect);
 
@@ -1501,7 +1531,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const outputNameInput = document.createElement("input");
     outputNameInput.type = "text";
     outputNameInput.value = "hazard_resistance_output";
-    outputNameInput.className = "spazio-text-field";
+    applyRightPanelStyle(outputNameWrapper, "input");
+    //outputNameInput.className = "spazio-text-field";
     outputNameWrapper.appendChild(outputNameInput);
 
     // ── Status Element ──

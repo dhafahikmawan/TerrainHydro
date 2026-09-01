@@ -147,6 +147,57 @@ describe("registerTemplateRightPanel", () => {
     expect(subForm.style.borderTop).not.toBe("");
   });
 
+  it("keeps submit buttons blue even after the registry tree pass runs", () => {
+    const root = document.createElement("div");
+    const button = document.createElement("button");
+    button.className = "spazio-submit-button";
+    button.textContent = "Generate Slope";
+    root.appendChild(button);
+
+    styleRightPanelTree(root);
+
+    expect(button.classList.contains("spazio-submit-button")).toBe(true);
+    expect(button.style.backgroundColor).toBe("rgb(37, 99, 235)");
+    expect(button.style.color).toBe("rgb(255, 255, 255)");
+  });
+
+  it("styles network analysis section and form controls through the registry", () => {
+    const root = document.createElement("div");
+    const section = document.createElement("div");
+    section.className = "na-section";
+    const row = document.createElement("div");
+    row.className = "na-form-row";
+    const label = document.createElement("label");
+    label.className = "na-label";
+    const input = document.createElement("input");
+    input.className = "na-input";
+    const select = document.createElement("select");
+    select.className = "na-select";
+    const button = document.createElement("button");
+    button.className = "na-btn na-btn--primary";
+    const radioGroup = document.createElement("div");
+    radioGroup.className = "na-radio-group";
+    const radioLabel = document.createElement("label");
+    radioLabel.className = "na-radio-label";
+    const status = document.createElement("div");
+    status.className = "na-status";
+
+    section.append(row, label, input, select, button, radioGroup, radioLabel, status);
+    root.appendChild(section);
+
+    styleRightPanelTree(root);
+
+    expect(section.classList.contains("spazio-section")).toBe(true);
+    expect(row.classList.contains("spazio-form-row")).toBe(true);
+    expect(label.classList.contains("spazio-input-label")).toBe(true);
+    expect(input.classList.contains("spazio-text-field")).toBe(true);
+    expect(select.classList.contains("spazio-dropdown")).toBe(true);
+    expect(button.classList.contains("spazio-submit-button")).toBe(true);
+    expect(radioGroup.classList.contains("spazio-averaging-group")).toBe(true);
+    expect(radioLabel.classList.contains("spazio-radio-label")).toBe(true);
+    expect(status.classList.contains("spazio-status")).toBe(true);
+  });
+
   it("closes and unregisters the panel when disposed", () => {
     const { app, unregister } = createApp();
     const dispose = registerTemplateRightPanel(app);
