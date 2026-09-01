@@ -7,7 +7,7 @@ import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
 import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
 import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../tha/terrain-hydrology";
-import { applyRightPanelStyles, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
+import { applyRightPanelStyle, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
@@ -102,8 +102,8 @@ function createBandOptions(num : number, mode : boolean){
 function drawDropdownOptions(dropdown : HTMLElement, methods : string[], textContents? : string[]){
   methods.forEach((method, index) => {
     const methodOption = document.createElement("option");
-    methodOption.className = "geoprocessing-method-option";
-    applyRightPanelStyles(methodOption, "right-panel-option");
+    methodOption.className = "spazio-dropdown-options";
+    applyRightPanelStyle(methodOption, "selectOption");
     methodOption.value = method;
     if(!textContents || index >= textContents.length){
       methodOption.textContent = method;
@@ -124,10 +124,13 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const methodFunctionPlaceholder = document.createElement("select");
     methodFunctionPlaceholder.value = "";
     methodFunctionPlaceholder.textContent = "Select Raster Analysis Function";
+    // {lang:id} Pilih Fungsi Analisa Raster
     methodFunctionSelect.appendChild(methodFunctionPlaceholder);
     wrapper.appendChild(methodFunctionSelect);
     const methodFunctionOptions = ["", "Slope", "NDVI", "NDWI"];
+    // {lang:id} ["", "Kemiringan", "NDVI", NDWI]
     const methodFunctionOptionsTC = ["Select Analysis Function", "Slope", "NDVI", "NDWI"];
+    // {lang:id} ["Pilih fungsi analisa", Kemiringan, NDVI, NDVI]
     const raMethodForm = document.createElement("div");
     wrapper.appendChild(raMethodForm);
     drawDropdownOptions(methodFunctionSelect, methodFunctionOptions, methodFunctionOptionsTC);
@@ -774,7 +777,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   else if(method  === "Terrain & Hydrology Analysis"){
     const methodFunctionSelect = document.createElement("select");
     const methodFunctionOptions = ["","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
+      // {lang:id} ["", "Pemodelan Kerentanan Bahaya", "Penataan Ruang Tangguh Bahaya"]
     const methodFunctionTC = ["Select Terrain & Hydrology Analysis","Hazard Vulnerability Modeling", "Hazard Resistance Analysis"];
+    // {lang:id} ["Pilih Analisis Medan dan Hidrologi",  "Pemodelan Kerentanan Bahaya", "Penataan Ruang Tangguh Baahaya"]
     const thaMethodForm = document.createElement("div");
     drawDropdownOptions(methodFunctionSelect, methodFunctionOptions, methodFunctionTC);
     wrapper.appendChild(methodFunctionSelect);
@@ -785,20 +790,44 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       })
   }
   else if(method === "Watershed Delineation"){
-    const section = (title: string) => { const element = document.createElement("section"); element.className = "right-panel-section"; const heading = document.createElement("h3"); heading.textContent = title; element.appendChild(heading); wrapper.appendChild(element); return element; };
-    const label = (text: string) => { const element = document.createElement("label"); element.textContent = text; return element; };
-    const status = document.createElement("div"); status.className = "wd-progress"; status.textContent = "Select a DEM to begin.";
+    const section = (title: string) => { 
+      const element = document.createElement("section"); 
+      element.className = "spazio-section"; 
+      const heading = document.createElement("h3"); 
+      heading.className = "spazio-title"; 
+      heading.textContent = title; 
+      element.appendChild(heading); 
+      wrapper.appendChild(element); 
+      return element; 
+    };
+    const label = (text: string) => { 
+      const element = document.createElement("label"); 
+      element.className = "spazio-input-label"; 
+      element.textContent = text; 
+      return element; 
+    };
+    const status = document.createElement("div"); 
+    status.className = "spazio-wd-progress"; 
+    status.textContent = "Select a DEM to begin.";
+    // {lang:id} Pilih DEM untuk memulai
     let currentDem: DemData | null = null;
     let currentResult: DelineationResult | null = null;
-    const download = (name: string, blob: Blob) => { const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href); };
+    //const download = (name: string, blob: Blob) => { const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click(); URL.revokeObjectURL(link.href); };
     const rasterBlob = (data: Float32Array, dem: DemData) => new Blob([writeFloat32TiledGeoTIFF(dem.width, dem.height, data, dem.geotransform, dem.crsCode, 1)], { type: "image/tiff" });
-    const setStatus = (message: string, error = false) => { status.textContent = message; status.className = `wd-progress ${error ? "wd-badge--error" : ""}`; };
-    const runButton = document.createElement("button"); runButton.type = "button"; runButton.textContent = "Run Analysis"; runButton.disabled = true;
+    const setStatus = (message: string, error = false) => { 
+      status.textContent = message; 
+      status.className = `spazio-wd-progress ${error ? "spazio-wd-badge-error" : ""}`; 
+    };
+    const runButton = document.createElement("button"); 
+    runButton.type = "button"; 
+    runButton.textContent = "Run Analysis"; 
+    // {lang:id} Lakukan Analisis
+    runButton.disabled = true;
     const updateRunButtonState = () => { runButton.disabled = !currentDem; };
 
     const inputSection = section("Input DEM");
     const fileInput = document.createElement("input"); fileInput.type = "file"; fileInput.accept = ".tif,.tiff"; inputSection.appendChild(fileInput);
-    const metadata = document.createElement("div"); metadata.className = "right-panel-help"; inputSection.appendChild(metadata);
+    const metadata = document.createElement("div"); metadata.className = "spazio-input-description"; inputSection.appendChild(metadata);
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files?.[0];
       if (!file) {
@@ -836,12 +865,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const parameterSection = section("Delineation Parameters");
     const zLimit = document.createElement("input"); zLimit.type = "number"; zLimit.min = "0"; zLimit.step = "0.1"; zLimit.value = "0";
     parameterSection.append(label("Z-limit (0 = unlimited)"), zLimit);
-    const thresholdRow = document.createElement("div"); thresholdRow.className = "wd-slider-control";
-    const threshold = document.createElement("input"); threshold.type = "range"; threshold.min = "0"; threshold.max = "5000"; threshold.value = "500"; threshold.className = "wd-slider";
-    const thresholdNumber = document.createElement("input"); thresholdNumber.type = "number"; thresholdNumber.min = "0"; thresholdNumber.max = "5000"; thresholdNumber.value = "500"; thresholdNumber.className = "wd-number-input";
+    const thresholdRow = document.createElement("div"); thresholdRow.className = "spazio-wd-slider-control";
+    const threshold = document.createElement("input"); threshold.type = "range"; threshold.min = "0"; threshold.max = "5000"; threshold.value = "500"; threshold.className = "spazio-slider";
+    const thresholdNumber = document.createElement("input"); thresholdNumber.type = "number"; thresholdNumber.min = "0"; thresholdNumber.max = "5000"; thresholdNumber.value = "500"; thresholdNumber.className = "spazio-wd-number-input";
     threshold.addEventListener("input", () => { thresholdNumber.value = threshold.value; }); thresholdNumber.addEventListener("input", () => { threshold.value = thresholdNumber.value; }); thresholdRow.append(threshold, thresholdNumber); parameterSection.append(label("Stream threshold"), thresholdRow);
     parameterSection.append(runButton, status);
-    const resultActions = document.createElement("div"); resultActions.className = "right-panel-flex-column"; parameterSection.appendChild(resultActions);
+    const resultActions = document.createElement("div"); resultActions.className = "spazio-flex-col"; parameterSection.appendChild(resultActions);
     runButton.addEventListener("click", async () => {
       if (!currentDem) return;
       runButton.disabled = true;
@@ -857,10 +886,24 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         setStatus(`Analysis complete: ${currentResult.basinPolygons.features.length} basins found.`);
         resultActions.textContent = "";
         //if (ENABLE_DOWNLOAD) { const filled = document.createElement("button"); filled.textContent = "Download filled DEM"; filled.onclick = () => download("filled-dem.tif", rasterBlob(currentResult!.filledElevation, currentDem!)); resultActions.appendChild(filled); const network = document.createElement("button"); network.textContent = "Download network GeoJSON"; network.onclick = () => download("network.geojson", new Blob([JSON.stringify(currentResult!.channelNetwork)], { type: "application/geo+json" })); resultActions.appendChild(network); }
-      } catch (error) { setStatus(error instanceof Error ? error.message : "Analysis failed.", true); } finally { runButton.disabled = false; }
+      } catch (error) { 
+        setStatus(error instanceof Error ? error.message : "Analysis failed.", true); 
+      } finally { 
+        runButton.disabled = false; 
+      }
     });
 
-    const statsSection = section("Clip & Elevation Statistics"); const basinInput = document.createElement("input"); basinInput.type = "number"; basinInput.min = "1"; basinInput.placeholder = "Basin ID"; const clipButton = document.createElement("button"); clipButton.textContent = "Clip Basin"; const statsGrid = document.createElement("div"); statsGrid.className = "wd-stats-grid"; statsSection.append(label("Target basin ID"), basinInput, clipButton, statsGrid);
+    const statsSection = section("Clip & Elevation Statistics"); 
+    const basinInput = document.createElement("input"); 
+    basinInput.type = "number"; 
+    basinInput.min = "1"; 
+    basinInput.placeholder = "Basin ID"; 
+    const clipButton = document.createElement("button"); 
+    clipButton.textContent = "Clip Basin"; 
+    // {lang:id} Potong Basin?
+    const statsGrid = document.createElement("div"); 
+    statsGrid.className = "wd-stats-grid"; 
+    statsSection.append(label("Target basin ID"), basinInput, clipButton, statsGrid);
     clipButton.addEventListener("click", () => {
       if (!currentDem || !currentResult) return;
       const selected = Number(basinInput.value);
@@ -877,12 +920,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
       ];
       for (const [name, value, isElevation] of statRows) {
         const item = document.createElement("div");
-        item.className = "wd-stat-item";
+        item.className = "spazio-wd-stat-item";
         const itemLabel = document.createElement("span");
-        itemLabel.className = "wd-stat-label";
+        itemLabel.className = "spazio-wd-stat-label";
         itemLabel.textContent = name;
         const itemValue = document.createElement("span");
-        itemValue.className = "wd-stat-value";
+        itemValue.className = "spazio-wd-stat-value";
         itemValue.textContent = isElevation ? `${value.toFixed(2)} m` : value.toLocaleString();
         item.append(itemLabel, itemValue);
         statsGrid.appendChild(item);
@@ -910,18 +953,22 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   }
   //Raster Analysis Forms
   else if(method === "Slope"){
-    const fileInputLabel = document.createElement("h1");
+    const fileInputLabel = document.createElement("h2");
+    fileInputLabel.className = "spazio-title";
     fileInputLabel.textContent = "DEM Raster";
     wrapper.appendChild(fileInputLabel);
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".tiff, .tif";
-    fileInput.className ="spatio-file-input";
+    fileInput.className ="spazio-text-field";
     wrapper.appendChild(fileInput);
-    const unitSelectLabel = document.createElement("h1");
+    const unitSelectLabel = document.createElement("h2");
+    unitSelectLabel.className = "spazio-title";
     unitSelectLabel.textContent = "Select Slope Unit";
+    // {lang:id} Pilih unit kemiringan
     const unitSelect = document.createElement("select");
     drawDropdownOptions(unitSelect, ["Degrees", "Percent", "Ratio"]);
+        // {lang:id} ["", "Derajat", "Persen", "Rasio"]
     const slopeZFactor = document.createElement("input");
     slopeZFactor.type = "number";
     slopeZFactor.min = "0";
@@ -932,8 +979,9 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const processingButton = document.createElement("button");
     processingButton.type = "button";
-    processingButton.className = "spatio-action-button";
+    processingButton.className = "spazio-submit-button";
     processingButton.textContent = "Generate Slope";
+    // {lang:id} Buat Kemiringan
     wrapper.appendChild(processingButton);
     processingButton.addEventListener("click", async()=>{
       const file = fileInput.files?.[0];
@@ -966,7 +1014,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(nirSelectLabel)
     const nirSelect = document.createElement("select");
     wrapper.appendChild(nirSelect);
-    const fileInputBLabel = document.createElement("h1");
+    const fileInputBLabel = document.createElement("h2");
+    fileInputBLabel.className = "spazio-title";
     fileInputBLabel.textContent = "Red Raster";
     wrapper.appendChild(fileInputBLabel);
     const fileInputB = document.createElement("input");
@@ -974,7 +1023,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     fileInputB.accept = ".tiff, .tif";
     fileInputB.className ="spatio-file-input";
     wrapper.appendChild(fileInputB);
-    const redSelectLabel = document.createElement("h1");
+    const redSelectLabel = document.createElement("h2");
+    redSelectLabel.className = "spazio-title";
     redSelectLabel.textContent = 'Select raster band for "Red"';
     wrapper.appendChild(redSelectLabel);
     const redSelect = document.createElement("select");
@@ -991,6 +1041,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     actionButton.type = "button";
     actionButton.className = "spatio-action-button";
     actionButton.textContent = "Generate NDVI";
+    // {lang:id} Buat NDVI
     wrapper.appendChild(actionButton);
     actionButton.addEventListener('click', async () => {
       if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(redSelect.value) > 0){
@@ -1026,7 +1077,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     wrapper.appendChild(nirSelectLabel)
     const nirSelect = document.createElement("select");
     wrapper.appendChild(nirSelect);
-    const fileInputBLabel = document.createElement("h1");
+    const fileInputBLabel = document.createElement("h2");
+    fileInputBLabel.className = "spazio-title";
     fileInputBLabel.textContent = "Green Raster";
     wrapper.appendChild(fileInputBLabel);
     const fileInputB = document.createElement("input");
@@ -1034,7 +1086,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     fileInputB.accept = ".tiff, .tif";
     fileInputB.className ="spatio-file-input";
     wrapper.appendChild(fileInputB);
-    const greenSelectLabel = document.createElement("h1");
+    const greenSelectLabel = document.createElement("h2");
+    greenSelectLabel.className = "spazio-title";
     greenSelectLabel.textContent = 'Select raster band for "Green"';
     wrapper.appendChild(greenSelectLabel);
     const greenSelect = document.createElement("select");
@@ -1051,6 +1104,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     actionButton.type = "button";
     actionButton.className = "spatio-action-button";
     actionButton.textContent = "Generate NDWI";
+    // {lang:id} Buat NDWI
     wrapper.appendChild(actionButton);
     actionButton.addEventListener('click', async () => {
       if(fileInputA.files?.[0] && fileInputB.files?.[0] && Number(nirSelect.value) > 0 && Number(greenSelect.value) > 0){
@@ -1084,19 +1138,19 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // Form elements
     const form = document.createElement("div");
-    form.className = "plugin-control-form";
+    form.className = "spazio-form-container";
 
     const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
       const field = document.createElement("div");
-      field.className = "plugin-control-group";
+      field.className = "spazio-section";
       const label = document.createElement("label");
-      label.className = "plugin-control-label";
+      label.className = "spazio-input-label";
       label.textContent = labelText;
       field.appendChild(label);
       field.appendChild(input);
       if (helpText) {
         const hint = document.createElement("div");
-        hint.className = "plugin-control-help";
+        hint.className = "spazio-input-description";
         hint.textContent = helpText;
         field.appendChild(hint);
       }
@@ -1104,7 +1158,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     };
 
     const statusEl = document.createElement("div");
-    statusEl.className = "plugin-control-status";
+    statusEl.className = "spazio-status";
     statusEl.textContent = "";
 
     const setStatus = (msg: string) => {
@@ -1113,33 +1167,35 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // 1. Input Layer Choice
     const inputWrapper = document.createElement("div");
-    inputWrapper.className = "plugin-control-flex-col";
+    inputWrapper.className = "spazio-flex-col";
 
     const inputFileInput = document.createElement("input");
     inputFileInput.type = "file";
     inputFileInput.accept = ".geojson,.json";
-    inputFileInput.className = "plugin-control-input";
+    inputFileInput.className = "spazio-text-field";
 
     const inputNameInput = document.createElement("input");
     inputNameInput.type = "text";
-    inputNameInput.className = "plugin-control-input";
+    inputNameInput.className = "spazio-text-field";
     inputNameInput.placeholder = "Input layer name";
 
     const inputLoadBtn = document.createElement("button");
     inputLoadBtn.type = "button";
-    inputLoadBtn.className = "plugin-control-button";
+    inputLoadBtn.className = "spazio-submit-button";
     inputLoadBtn.textContent = "Load Input";
+    // {lang:id} Muat Input
 
     const inputRow = document.createElement("div");
-    inputRow.className = "plugin-control-flex";
+    inputRow.className = "spazio-flex-row";
     inputRow.appendChild(inputNameInput);
     inputRow.appendChild(inputLoadBtn);
     inputWrapper.appendChild(inputFileInput);
     inputWrapper.appendChild(inputRow);
 
     const inputStatusText = document.createElement("div");
-    inputStatusText.className = "plugin-control-status";
+    inputStatusText.className = "spazio-status";
     inputStatusText.textContent = "No input layer loaded";
+    // {lang:id} Tidak ada layer input yang termuat
 
     // 2. Buffer distance & units
     const distanceInput = document.createElement("input");
@@ -1147,10 +1203,10 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     distanceInput.min = "0";
     distanceInput.step = "0.1";
     distanceInput.value = "1";
-    distanceInput.className = "plugin-control-input";
+    distanceInput.className = "spazio-text-field";
 
     const unitSelect = document.createElement("select");
-    unitSelect.className = "plugin-control-input";
+    unitSelect.className = "spazio-dropdown";
     unitSelect.innerHTML = `
       <option value="kilometers">Kilometers</option>
       <option value="meters">Meters</option>
@@ -1159,47 +1215,50 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const bufferBtn = document.createElement("button");
     bufferBtn.type = "button";
-    bufferBtn.className = "plugin-control-button";
+    bufferBtn.className = "spazio-submit-button";
     bufferBtn.textContent = "Buffer Only";
+    // {lang:id} Hanya Buffer
     bufferBtn.disabled = true;
 
     // 3. Join Layer Choice
     const joinWrapper = document.createElement("div");
-    joinWrapper.className = "plugin-control-flex-col";
+    joinWrapper.className = "spazio-flex-col";
 
     const joinFileInput = document.createElement("input");
     joinFileInput.type = "file";
     joinFileInput.accept = ".geojson,.json";
-    joinFileInput.className = "plugin-control-input";
+    joinFileInput.className = "spazio-text-field";
 
     const joinNameInput = document.createElement("input");
     joinNameInput.type = "text";
-    joinNameInput.className = "plugin-control-input";
+    joinNameInput.className = "spazio-text-field";
     joinNameInput.placeholder = "Join layer name";
 
     const joinLoadBtn = document.createElement("button");
     joinLoadBtn.type = "button";
-    joinLoadBtn.className = "plugin-control-button";
+    joinLoadBtn.className = "spazio-submit-button";
     joinLoadBtn.textContent = "Load Join";
+    // {lang:id} Muat layer penggabungan
 
     const joinRow = document.createElement("div");
-    joinRow.className = "plugin-control-flex";
+    joinRow.className = "spazio-flex-row";
     joinRow.appendChild(joinNameInput);
     joinRow.appendChild(joinLoadBtn);
     joinWrapper.appendChild(joinFileInput);
     joinWrapper.appendChild(joinRow);
 
     const joinStatusText = document.createElement("div");
-    joinStatusText.className = "plugin-control-status";
+    joinStatusText.className = "spazio-status";
     joinStatusText.textContent = "No join layer loaded";
+    // {lang:id} Tidak ada layer penggabungan yang termuat
 
     // 4. Summarization configurations
     const joinAttributeSelect = document.createElement("select");
-    joinAttributeSelect.className = "plugin-control-input";
+    joinAttributeSelect.className = "spazio-dropdown";
     joinAttributeSelect.disabled = true;
 
     const relationshipSelect = document.createElement("select");
-    relationshipSelect.className = "plugin-control-input";
+    relationshipSelect.className = "spazio-dropdown";
     relationshipSelect.innerHTML = `
       <option value="intersects">Intersects</option>
       <option value="within">Within</option>
@@ -1207,7 +1266,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     `;
 
     const joinTypeSelect = document.createElement("select");
-    joinTypeSelect.className = "plugin-control-input";
+    joinTypeSelect.className = "spazio-dropdown";
     joinTypeSelect.innerHTML = `
       <option value="inner">Inner Join</option>
       <option value="left">Left Join</option>
@@ -1215,14 +1274,15 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const outputNameInput = document.createElement("input");
     outputNameInput.type = "text";
-    outputNameInput.className = "plugin-control-input";
+    outputNameInput.className = "spazio-text-field";
     outputNameInput.placeholder = "Analysis Results";
     outputNameInput.value = "Hazard Vulnerability Output";
 
     const analyzeBtn = document.createElement("button");
     analyzeBtn.type = "button";
-    analyzeBtn.className = "plugin-control-button";
+    analyzeBtn.className = "spazio-submit-button";
     analyzeBtn.textContent = "Run Analysis";
+    // {lang:id} Jalankan Analisis
     analyzeBtn.disabled = true;
 
     // Enable/disable actions helper
@@ -1277,7 +1337,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         if (attrs.size > 0) {
           attrs.forEach(attr => {
             const opt = document.createElement("option");
-            applyRightPanelStyles(opt, "right-panel-option");
+            applyRightPanelStyle(opt, "selectOption");
             opt.value = attr;
             opt.textContent = attr;
             joinAttributeSelect.appendChild(opt);
@@ -1356,7 +1416,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     form.appendChild(createField("Buffer Units", unitSelect));
 
     const bufRow = document.createElement("div");
-    bufRow.className = "plugin-control-flex";
+    bufRow.className = "spazio-flex-row";
     bufRow.appendChild(bufferBtn);
     form.appendChild(bufRow);
 
@@ -1376,20 +1436,20 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
   else if(method ==="Hazard Resistance Analysis"){
     const app = _app;
     const form = document.createElement("form");
-    form.className = "geoprocessing-form";
+    form.className = "spazio-form-container";
 
     // ── createField helper (scoped to this block) ──
     const createField = (labelText: string, input: HTMLElement, helpText?: string): HTMLDivElement => {
       const field = document.createElement("div");
-      field.className = "plugin-control-group";
+      field.className = "spazio-section";
       const label = document.createElement("label");
-      label.className = "plugin-control-label";
+      label.className = "spazio-input-label";
       label.textContent = labelText;
       field.appendChild(label);
       field.appendChild(input);
       if (helpText) {
         const hint = document.createElement("div");
-        hint.className = "plugin-control-help";
+        hint.className = "spazio-input-description";
         hint.textContent = helpText;
         field.appendChild(hint);
       }
@@ -1401,7 +1461,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const inputLayerInput = document.createElement("input");
     inputLayerInput.type = "file";
     inputLayerInput.accept = ".geojson,.json,application/geo+json";
-    inputLayerInput.className = "spatio-file-input";
+    inputLayerInput.className = "spazio-text-field";
     inputLayerWrapper.appendChild(inputLayerInput);
 
     // ── Data Layers Count Field ──
@@ -1411,7 +1471,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     countInput.min = "0";
     countInput.max = "10";
     countInput.value = "0";
-    countInput.className = "spatio-file-input";
+    countInput.className = "spazio-text-field";
     countWrapper.appendChild(countInput);
 
     // ── Container for dynamic data layers file inputs ──
@@ -1420,7 +1480,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     // ── Method Selector (AND / OR) ──
     const methodWrapper = document.createElement("div");
     const methodSelect = document.createElement("select");
-    methodSelect.className = "spatio-file-input";
+    methodSelect.className = "spazio-dropdown";
     drawDropdownOptions(methodSelect, ["OR", "AND"], ["OR (Union)", "AND (Intersection)"]);
     methodWrapper.appendChild(methodSelect);
 
@@ -1432,6 +1492,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const clipLabel = document.createElement("label");
     clipLabel.htmlFor = "hra-clip-checkbox";
     clipLabel.textContent = " Clip output features to input layer boundaries";
+    // {lang:id} Potong fitur-fitur output ke batas-batas layer input
     clipLabel.style.marginLeft = "8px";
     clipWrapper.append(clipCheckbox, clipLabel);
 
@@ -1440,17 +1501,17 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     const outputNameInput = document.createElement("input");
     outputNameInput.type = "text";
     outputNameInput.value = "hazard_resistance_output";
-    outputNameInput.className = "spatio-file-input";
+    outputNameInput.className = "spazio-text-field";
     outputNameWrapper.appendChild(outputNameInput);
 
     // ── Status Element ──
     const statusEl = document.createElement("div");
-    statusEl.className = "geoprocessing-status";
+    statusEl.className = "spazio-status";
     statusEl.style.marginTop = "10px";
 
     // ── Action Buttons Container ──
     const actionsWrapper = document.createElement("div");
-    actionsWrapper.className = "na-actions-section";
+    actionsWrapper.className = "spazio-flex-col";
     actionsWrapper.style.display = "flex";
     actionsWrapper.style.flexDirection = "column";
     actionsWrapper.style.gap = "8px";
@@ -1458,13 +1519,15 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     const analyzeBtn = document.createElement("button");
     analyzeBtn.type = "button";
-    analyzeBtn.className = "na-btn na-btn--primary";
+    analyzeBtn.className = "spazio-submit-button";
     analyzeBtn.textContent = "Run Analysis";
+    // {lang:id} Jalankan Analisis
 
     const resetBtn = document.createElement("button");
     resetBtn.type = "button";
-    resetBtn.className = "na-btn na-btn--secondary";
+    resetBtn.className = "spazio-button";
     resetBtn.textContent = "Reset Form";
+    // {lang:id} Reset Formulir
 
     actionsWrapper.append(analyzeBtn, resetBtn);
 
@@ -1475,14 +1538,16 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     if (ENABLE_DOWNLOAD) {
       downloadFinalBtn = document.createElement("button");
       downloadFinalBtn.type = "button";
-      downloadFinalBtn.className = "na-btn na-btn--secondary";
+      downloadFinalBtn.className = "spazio-button";
       downloadFinalBtn.textContent = "Download Final GeoJSON";
+      // {lang:id} Download GeoJSON terakhir
       downloadFinalBtn.disabled = true;
 
       downloadIntermediateBtn = document.createElement("button");
       downloadIntermediateBtn.type = "button";
-      downloadIntermediateBtn.className = "na-btn na-btn--secondary";
+      downloadIntermediateBtn.className = "spazio-button";
       downloadIntermediateBtn.textContent = "Download Intermediate GeoJSON";
+      // {lang:id} Download GeoJSON proses
       downloadIntermediateBtn.disabled = true;
 
       actionsWrapper.append(downloadFinalBtn, downloadIntermediateBtn);
@@ -1517,12 +1582,12 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
         const label = document.createElement("label");
         label.textContent = `Data Layer ${i + 1}`;
-        label.className = "geoprocessing-field-label";
+        label.className = "spazio-input-label";
 
         const fileIn = document.createElement("input");
         fileIn.type = "file";
         fileIn.accept = ".geojson,.json,application/geo+json";
-        fileIn.className = "spatio-file-input";
+        fileIn.className = "spazio-text-field";
 
         fileIn.addEventListener("change", () => {
           dataLayerFiles[i] = fileIn.files?.[0] || null;
@@ -1700,10 +1765,11 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       //Description
       const heading = document.createElement("h2");
       heading.textContent = "Terrain & Hydrological Analysis Workbench";
+      // {lang:id} Workbench Analisa Medan & Hidrologi
 
       //Method Select
       const method = document.createElement("select");
-      method.className = "geoprocessing-method-select";
+      method.className = "spazio-dropdown";
       /*
       const methodPlaceholder = document.createElement("option");
       methodPlaceholder.value = "";
@@ -1715,7 +1781,7 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       _method = method;
       //Method Form Container
       const methodFormContainer = document.createElement("div");
-      methodFormContainer.className = "geoprocessing-method-form-container";
+      methodFormContainer.className = "spazio-form-container";
 
       const body = document.createElement("p");
       _methodForm = methodFormContainer;
