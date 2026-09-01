@@ -9,7 +9,37 @@ import {
   delineateBasins,
   vectorizeBasins,
   clipAndComputeStats,
+  reprojectCoords,
 } from "../src/lib/tha/watershed-delineation";
+
+describe("reprojectCoords using proj4", () => {
+  it("passes through EPSG:4326 coordinates", () => {
+    const coords = reprojectCoords(106.8456, -6.2088, 4326);
+    expect(coords[0]).toBeCloseTo(106.8456, 4);
+    expect(coords[1]).toBeCloseTo(-6.2088, 4);
+  });
+
+  it("converts EPSG:3857 Web Mercator to WGS84 coordinates", () => {
+    const origin = reprojectCoords(0, 0, 3857);
+    expect(origin[0]).toBeCloseTo(0, 4);
+    expect(origin[1]).toBeCloseTo(0, 4);
+
+    const london = reprojectCoords(-12499.55, 6711364.57, 3857);
+    expect(london[0]).toBeCloseTo(-0.1123, 3);
+    expect(london[1]).toBeCloseTo(51.5064, 3);
+  });
+
+  it("converts UTM EPSG:32633 to WGS84 coordinates", () => {
+    const coords = reprojectCoords(500000, 4649776.23, 32633);
+    expect(coords[0]).toBeCloseTo(15.0, 2);
+    expect(coords[1]).toBeCloseTo(42.0, 2);
+  });
+
+  it("falls back gracefully when given an unrecognized CRS code", () => {
+    const coords = reprojectCoords(100, 200, 99999999);
+    expect(coords).toEqual([100, 200]);
+  });
+});
 
 describe("Watershed Delineation with Z-limit = 1 and Threshold = 100", () => {
   it("correctly delineates 18 basins on dem.tif without sink self-loop artifacts", async () => {

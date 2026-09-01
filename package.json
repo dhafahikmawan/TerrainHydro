@@ -89,6 +89,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.9.2",
+    "@types/proj4": "^2.5.6",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
@@ -110,6 +111,7 @@
     "@turf/turf": "^7.4.0",
     "geotiff": "^3.0.5",
     "ngraph.graph": "^20.1.2",
-    "ngraph.path": "^1.6.1"
+    "ngraph.path": "^1.6.1",
+    "proj4": "^2.22.0"
   }
 }

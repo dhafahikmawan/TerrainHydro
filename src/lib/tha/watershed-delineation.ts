@@ -1,3 +1,4 @@
+import proj4 from "proj4";
 import type { FeatureCollection, GeoJsonProperties } from "geojson";
 import type { RasterSource } from "../utils/geotiff-processor";
 import { MinHeap } from "./heap";
@@ -43,14 +44,19 @@ export function isNoData(value: number, noDataValue: number): boolean {
 }
 export function canonicalNoData(noDataValue: number): number { return Number.isNaN(noDataValue) ? Number.NaN : noDataValue; }
 export function reprojectCoords(x: number, y: number, crsCode: number): [number, number] {
-  if (crsCode === 4326 || (crsCode >= 4000 && crsCode < 5000)) return [x, y];
-  if (crsCode === 3857 || crsCode === 900913 || crsCode === 3785) {
-    const halfCircumference = 20037508.342789244;
-    const longitude = x / halfCircumference * 180;
-    const latitude = Math.max(-85.051129, Math.min(85.051129, (2 * Math.atan(Math.exp(y / halfCircumference * Math.PI)) - Math.PI / 2) * 180 / Math.PI));
-    return [longitude, latitude];
+  if (crsCode === 4326 || (crsCode >= 4000 && crsCode < 5000)) {
+    return [x, y];
   }
-  return [x, y];
+
+  try {
+    const [longitude, latitude] = proj4(`EPSG:${crsCode}`, "EPSG:4326", [x, y]);
+    if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+      return [x, y];
+    }
+    return [longitude, latitude];
+  } catch {
+    return [x, y];
+  }
 }
 
 function neighbor(index: number, code: number, width: number, height: number): number {
