@@ -202,15 +202,55 @@ export const RIGHT_PANEL_STYLES = {
     textAlign: "right",
     flex: "0 0 82px",
   },
-  wdStatsGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" },
-  wdStatItem: { padding: "8px", border: "1px solid #d1d5db", borderRadius: "4px", backgroundColor: "#f9fafb" },
-  wdStatLabel: { display: "block", color: "#6b7280", fontSize: "11px" },
-  wdStatValue: { display: "block", color: "#111827", fontSize: "14px", fontWeight: "600" },
-  wdProgress: { padding: "8px", backgroundColor: "#eff6ff", color: "#1e3a8a", fontSize: "12px" },
-  wdBadge: { display: "inline-block", padding: "3px 8px", borderRadius: "999px", backgroundColor: "#e5e7eb", color: "#374151", fontSize: "11px", fontWeight: "600" },
-  wdBadgeOk: { backgroundColor: "#dcfce7", color: "#166534" },
-  wdBadgeError: { backgroundColor: "#fee2e2", color: "#991b1b" },
-  wdBadgeRunning: { backgroundColor: "#dbeafe", color: "#1e40af" },
+  wdStatsGrid: { 
+    display: "grid", 
+    gridTemplateColumns: "1fr 1fr", 
+    gap: "6px" 
+  },
+  wdStatItem: { 
+    padding: "8px", 
+    border: "1px solid #d1d5db", 
+    borderRadius: "4px", 
+    backgroundColor: "#f9fafb" 
+  },
+  wdStatLabel: { 
+    display: "block", 
+    color: "#6b7280", 
+    fontSize: "11px" 
+  },
+  wdStatValue: { 
+    display: "block", 
+    color: "#111827", 
+    fontSize: "14px", 
+    fontWeight: "600" 
+  },
+  wdProgress: { 
+    padding: "8px", 
+    backgroundColor: "#eff6ff", 
+    color: "#1e3a8a", 
+    fontSize: "12px" 
+  },
+  wdBadge: { 
+    display: "inline-block", 
+    padding: "3px 8px", 
+    borderRadius: "999px", 
+    backgroundColor: "#e5e7eb", 
+    color: "#374151", 
+    fontSize: "11px", 
+    fontWeight: "600" 
+  },
+  wdBadgeOk: { 
+    backgroundColor: "#dcfce7", 
+    color: "#166534" 
+  },
+  wdBadgeError: { 
+    backgroundColor: "#fee2e2", 
+    color: "#991b1b" 
+  },
+  wdBadgeRunning: { 
+    backgroundColor: "#dbeafe", 
+    color: "#1e40af" 
+  },
   rasterList: {
     display: "flex",
     flexDirection: "column",
@@ -360,6 +400,12 @@ export const RIGHT_PANEL_STYLES = {
     flexDirection: "column",
     gap: "4px",
   },
+  flexCol:{
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginTop: "15px",
+  },
   hidden: { display: "none" },
   visibleFlex: { display: "flex" },
   visibleGrid: { display: "grid" },
@@ -426,6 +472,7 @@ const STYLE_CLASS_ALIASES = {
   hidden: "spazio-hidden",
   visibleFlex: "spazio-visible-flex",
   visibleGrid: "spazio-visible-grid",
+  flexCol: "spazio-flex-col"
 } as const;
 
 export type RightPanelStyleName = keyof typeof RIGHT_PANEL_STYLES;

@@ -102,7 +102,7 @@ function createBandOptions(num : number, mode : boolean){
 function drawDropdownOptions(dropdown : HTMLElement, methods : string[], textContents? : string[]){
   methods.forEach((method, index) => {
     const methodOption = document.createElement("option");
-    methodOption.className = "spazio-dropdown-options";
+    //methodOption.className = "spazio-dropdown-options";
     applyRightPanelStyle(methodOption, "selectOption");
     methodOption.value = method;
     if(!textContents || index >= textContents.length){
@@ -1506,26 +1506,32 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
     // ── Status Element ──
     const statusEl = document.createElement("div");
-    statusEl.className = "spazio-status";
-    statusEl.style.marginTop = "10px";
+    applyRightPanelStyle(statusEl, "status");
+    //statusEl.className = "spazio-status";
+    //statusEl.style.marginTop = "10px";
 
     // ── Action Buttons Container ──
     const actionsWrapper = document.createElement("div");
+    applyRightPanelStyle(actionsWrapper, "flexCol");
+    /*
     actionsWrapper.className = "spazio-flex-col";
     actionsWrapper.style.display = "flex";
     actionsWrapper.style.flexDirection = "column";
     actionsWrapper.style.gap = "8px";
     actionsWrapper.style.marginTop = "15px";
+    */
 
     const analyzeBtn = document.createElement("button");
     analyzeBtn.type = "button";
-    analyzeBtn.className = "spazio-submit-button";
+    //analyzeBtn.className = "spazio-submit-button";
     analyzeBtn.textContent = "Run Analysis";
+    applyRightPanelStyle(analyzeBtn, "operationButton");
     // {lang:id} Jalankan Analisis
 
     const resetBtn = document.createElement("button");
     resetBtn.type = "button";
-    resetBtn.className = "spazio-button";
+    //resetBtn.className = "spazio-button";
+    applyRightPanelStyle(resetBtn, "operationButton");
     resetBtn.textContent = "Reset Form";
     // {lang:id} Reset Formulir
 
@@ -1538,14 +1544,16 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     if (ENABLE_DOWNLOAD) {
       downloadFinalBtn = document.createElement("button");
       downloadFinalBtn.type = "button";
-      downloadFinalBtn.className = "spazio-button";
+      //downloadFinalBtn.className = "spazio-button";
+      applyRightPanelStyle(downloadFinalBtn, "button");
       downloadFinalBtn.textContent = "Download Final GeoJSON";
       // {lang:id} Download GeoJSON terakhir
       downloadFinalBtn.disabled = true;
 
       downloadIntermediateBtn = document.createElement("button");
       downloadIntermediateBtn.type = "button";
-      downloadIntermediateBtn.className = "spazio-button";
+      //downloadIntermediateBtn.className = "spazio-button";
+      applyRightPanelStyle(downloadIntermediateBtn, "downloadButton");
       downloadIntermediateBtn.textContent = "Download Intermediate GeoJSON";
       // {lang:id} Download GeoJSON proses
       downloadIntermediateBtn.disabled = true;
@@ -1582,12 +1590,14 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
 
         const label = document.createElement("label");
         label.textContent = `Data Layer ${i + 1}`;
-        label.className = "spazio-input-label";
+        //label.className = "spazio-input-label";
+        applyRightPanelStyle(label, "label");
 
         const fileIn = document.createElement("input");
         fileIn.type = "file";
         fileIn.accept = ".geojson,.json,application/geo+json";
-        fileIn.className = "spazio-text-field";
+        //fileIn.className = "spazio-text-field";
+        applyRightPanelStyle(fileIn, "input");
 
         fileIn.addEventListener("change", () => {
           dataLayerFiles[i] = fileIn.files?.[0] || null;
@@ -1760,16 +1770,19 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
     render(container) {
       //Wrapper
       const wrap = document.createElement("div");
-      wrap.className = "geolibre-plugin-right-panel";
+      applyRightPanelStyle(wrap, "panel")
+      //wrap.className = "geolibre-plugin-right-panel";
 
       //Description
       const heading = document.createElement("h2");
+      applyRightPanelStyle(heading, "heading");
       heading.textContent = "Terrain & Hydrological Analysis Workbench";
       // {lang:id} Workbench Analisa Medan & Hidrologi
 
       //Method Select
       const method = document.createElement("select");
-      method.className = "spazio-dropdown";
+      applyRightPanelStyle(method, "methodSelect");
+      //method.className = "spazio-dropdown";
       /*
       const methodPlaceholder = document.createElement("option");
       methodPlaceholder.value = "";
@@ -1781,9 +1794,12 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       _method = method;
       //Method Form Container
       const methodFormContainer = document.createElement("div");
-      methodFormContainer.className = "spazio-form-container";
+      applyRightPanelStyle(methodFormContainer, "formContainer");
+      //methodFormContainer.className = "spazio-form-container";
 
       const body = document.createElement("p");
+      applyRightPanelStyle(body, "description");
+
       _methodForm = methodFormContainer;
 
       wrap.append(heading, body, method, methodFormContainer);
