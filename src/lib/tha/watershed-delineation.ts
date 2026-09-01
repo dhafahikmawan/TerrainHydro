@@ -4,7 +4,23 @@ import { MinHeap } from "./heap";
 
 export type DemData = RasterSource;
 export interface DelineationParams { zLimit: number; threshold: number; }
-export interface ElevationStatistics { min: number; max: number; mean: number; stdDev: number; count: number; }
+export interface ElevationStatistics {
+  min: number;
+  max: number;
+  mean: number;
+  stdDev: number;
+  count: number;
+  validCells: number;
+  noDataCells: number;
+  sum: number;
+}
+export interface ClippedBasinResult {
+  clippedElevation: Float32Array;
+  width: number;
+  height: number;
+  geotransform: [number, number, number, number, number, number];
+  statistics: ElevationStatistics;
+}
 export interface DelineationResult {
   filledElevation: Float32Array;
   flowDirection: Uint8Array;
@@ -25,7 +41,7 @@ const DISTANCES = [Math.SQRT2, 1, Math.SQRT2, 1, 1, Math.SQRT2, 1, Math.SQRT2];
 export function isNoData(value: number, noDataValue: number): boolean {
   return Number.isNaN(value) || (!Number.isNaN(noDataValue) && value === noDataValue);
 }
-export function canonicalNoData(noDataValue: number): number { return Number.isNaN(noDataValue) ? -9999 : noDataValue; }
+export function canonicalNoData(noDataValue: number): number { return Number.isNaN(noDataValue) ? Number.NaN : noDataValue; }
 export function reprojectCoords(x: number, y: number, crsCode: number): [number, number] {
   if (crsCode === 4326 || (crsCode >= 4000 && crsCode < 5000)) return [x, y];
   if (crsCode === 3857 || crsCode === 900913 || crsCode === 3785) {
@@ -83,7 +99,16 @@ export function sinkFill(width: number, height: number, elevation: Float32Array,
 
 export function computeD8AndAccumulation(width: number, height: number, filledDEM: Float32Array, noDataValue: number): { flowDirection: Uint8Array; flowAccumulation: Float32Array } {
   const size = width * height, directions = new Uint8Array(size), accumulation = new Float32Array(size), incoming = new Int32Array(size);
-  accumulation.fill(1);
+  const outNoData = canonicalNoData(noDataValue);
+
+  for (let index = 0; index < size; index++) {
+    if (isNoData(filledDEM[index], noDataValue)) {
+      accumulation[index] = outNoData;
+    } else {
+      accumulation[index] = 1;
+    }
+  }
+
   for (let index = 0; index < size; index++) {
     if (isNoData(filledDEM[index], noDataValue)) continue;
     const row = Math.floor(index / width), col = index % width;
@@ -118,16 +143,16 @@ function pixelCoords(index: number, width: number, transform: number[], crsCode:
   return reprojectCoords(transform[0] + col * transform[1] + row * transform[2], transform[3] + col * transform[4] + row * transform[5], crsCode);
 }
 
-export function extractChannels(width: number, height: number, flowDirection: Uint8Array, flowAccumulation: Float32Array, threshold: number, geotransform: number[], crsCode = 4326): { channelNetwork: FeatureCollection; junctionPoints: FeatureCollection } {
+export function extractChannels(width: number, height: number, flowDirection: Uint8Array, flowAccumulation: Float32Array, threshold: number, noDataValue: number, geotransform: number[], crsCode = 4326): { channelNetwork: FeatureCollection; junctionPoints: FeatureCollection } {
   const size = width * height, channel = new Uint8Array(size), incoming = new Uint8Array(size), nextCell = new Int32Array(size); nextCell.fill(-1);
   const effectiveThreshold = Math.max(1, threshold);
   for (let index = 0; index < size; index++) {
-    if (flowAccumulation[index] < effectiveThreshold) continue;
+    if (isNoData(flowAccumulation[index], noDataValue) || flowAccumulation[index] < effectiveThreshold) continue;
     channel[index] = 1;
     const code = flowDirection[index];
     if (code === 0) continue;
     const next = neighbor(index, code, width, height);
-    if (next >= 0 && flowAccumulation[next] >= effectiveThreshold) { nextCell[index] = next; incoming[next]++; }
+    if (next >= 0 && !isNoData(flowAccumulation[next], noDataValue) && flowAccumulation[next] >= effectiveThreshold) { nextCell[index] = next; incoming[next]++; }
   }
   const junctionPoints = [] as FeatureCollection["features"];
   for (let index = 0; index < size; index++) if (channel[index] && incoming[index] >= 2) junctionPoints.push({ type: "Feature", properties: { cellIndex: index, inDegree: incoming[index] }, geometry: { type: "Point", coordinates: pixelCoords(index, width, geotransform, crsCode) } });
@@ -178,13 +203,123 @@ export function vectorizeBasins(width: number, height: number, basinIdArray: Int
   return { type: "FeatureCollection", features };
 }
 
-export function clipAndComputeStats(width: number, height: number, filledElevation: Float32Array, basinIdArray: Int32Array, selectedBasinId: number, noDataValue: number): { clippedElevation: Float32Array; statistics: ElevationStatistics } {
-  const outputNoData = canonicalNoData(noDataValue), clippedElevation = new Float32Array(width * height); clippedElevation.fill(outputNoData);
-  let min = Infinity, max = -Infinity, sum = 0, count = 0;
-  for (let index = 0; index < clippedElevation.length; index++) if (basinIdArray[index] === selectedBasinId && !isNoData(filledElevation[index], noDataValue)) { const value = filledElevation[index]; clippedElevation[index] = value; min = Math.min(min, value); max = Math.max(max, value); sum += value; count++; }
-  const mean = count ? sum / count : 0; let squared = 0;
-  for (let index = 0; index < clippedElevation.length; index++) if (basinIdArray[index] === selectedBasinId && !isNoData(filledElevation[index], noDataValue)) squared += (filledElevation[index] - mean) ** 2;
-  return { clippedElevation, statistics: { min: count ? min : outputNoData, max: count ? max : outputNoData, mean, stdDev: count ? Math.sqrt(squared / count) : 0, count } };
+export function clipAndComputeStats(
+  width: number,
+  height: number,
+  filledElevation: Float32Array,
+  basinIdArray: Int32Array,
+  selectedBasinId: number,
+  noDataValue: number,
+  geotransform: [number, number, number, number, number, number] = [0, 1, 0, 0, 0, -1]
+): ClippedBasinResult {
+  const outputNoData = canonicalNoData(noDataValue);
+
+  let minCol = width;
+  let maxCol = -1;
+  let minRow = height;
+  let maxRow = -1;
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const idx = row * width + col;
+      if (basinIdArray[idx] === selectedBasinId) {
+        if (col < minCol) minCol = col;
+        if (col > maxCol) maxCol = col;
+        if (row < minRow) minRow = row;
+        if (row > maxRow) maxRow = row;
+      }
+    }
+  }
+
+  if (maxCol === -1 || maxRow === -1) {
+    return {
+      clippedElevation: new Float32Array(0),
+      width: 0,
+      height: 0,
+      geotransform: [...geotransform] as [number, number, number, number, number, number],
+      statistics: {
+        min: outputNoData,
+        max: outputNoData,
+        mean: 0,
+        stdDev: 0,
+        count: 0,
+        validCells: 0,
+        noDataCells: 0,
+        sum: 0,
+      },
+    };
+  }
+
+  const clippedWidth = maxCol - minCol + 1;
+  const clippedHeight = maxRow - minRow + 1;
+  const newOriginX = geotransform[0] + minCol * geotransform[1] + minRow * geotransform[2];
+  const newOriginY = geotransform[3] + minCol * geotransform[4] + minRow * geotransform[5];
+  const newGeotransform: [number, number, number, number, number, number] = [
+    newOriginX,
+    geotransform[1],
+    geotransform[2],
+    newOriginY,
+    geotransform[4],
+    geotransform[5],
+  ];
+
+  const clippedElevation = new Float32Array(clippedWidth * clippedHeight);
+  clippedElevation.fill(outputNoData);
+
+  let min = Infinity;
+  let max = -Infinity;
+  let sum = 0;
+  let validCells = 0;
+
+  for (let r = 0; r < clippedHeight; r++) {
+    for (let c = 0; c < clippedWidth; c++) {
+      const srcRow = minRow + r;
+      const srcCol = minCol + c;
+      const srcIndex = srcRow * width + srcCol;
+      const dstIndex = r * clippedWidth + c;
+
+      if (basinIdArray[srcIndex] !== selectedBasinId) continue;
+
+      const value = filledElevation[srcIndex];
+      if (isNoData(value, noDataValue)) continue;
+
+      clippedElevation[dstIndex] = value;
+      if (value < min) min = value;
+      if (value > max) max = value;
+      sum += value;
+      validCells++;
+    }
+  }
+
+  const totalClippedCells = clippedWidth * clippedHeight;
+  const noDataCells = totalClippedCells - validCells;
+  const mean = validCells > 0 ? sum / validCells : 0;
+
+  let squaredDiffSum = 0;
+  for (let index = 0; index < clippedElevation.length; index++) {
+    const value = clippedElevation[index];
+    if (isNoData(value, outputNoData)) continue;
+    squaredDiffSum += (value - mean) ** 2;
+  }
+
+  const stdDev = validCells > 0 ? Math.sqrt(squaredDiffSum / validCells) : 0;
+
+  return {
+    clippedElevation,
+    width: clippedWidth,
+    height: clippedHeight,
+    geotransform: newGeotransform,
+    statistics: {
+      min: validCells > 0 ? min : outputNoData,
+      max: validCells > 0 ? max : outputNoData,
+      mean,
+      stdDev,
+      count: validCells,
+      validCells,
+      noDataCells,
+      sum,
+    },
+  };
 }
 
 export function runDelineationDirect(
@@ -197,7 +332,7 @@ export function runDelineationDirect(
   onProgress?.(3, "Computing flow direction and accumulation...");
   const flow = computeD8AndAccumulation(dem.width, dem.height, filledElevation, dem.noDataValue);
   onProgress?.(4, "Extracting channels and junctions...");
-  const channels = extractChannels(dem.width, dem.height, flow.flowDirection, flow.flowAccumulation, params.threshold, dem.geotransform, dem.crsCode);
+  const channels = extractChannels(dem.width, dem.height, flow.flowDirection, flow.flowAccumulation, params.threshold, dem.noDataValue, dem.geotransform, dem.crsCode);
   onProgress?.(5, "Delineating subbasins...");
   const basinIdArray = delineateBasins(dem.width, dem.height, flow.flowDirection, channels.junctionPoints);
   onProgress?.(6, "Vectorizing watershed basins...");

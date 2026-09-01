@@ -9,7 +9,7 @@ self.onmessage = (event: MessageEvent) => {
     self.postMessage({ type: "PROGRESS", step: 3, msg: "Computing flow direction and accumulation..." });
     const flow = computeD8AndAccumulation(payload.width, payload.height, filledElevation, payload.noDataValue);
     self.postMessage({ type: "PROGRESS", step: 4, msg: "Extracting channels and junctions..." });
-    const channels = extractChannels(payload.width, payload.height, flow.flowDirection, flow.flowAccumulation, payload.threshold, payload.geotransform, payload.crsCode);
+    const channels = extractChannels(payload.width, payload.height, flow.flowDirection, flow.flowAccumulation, payload.threshold, payload.noDataValue, payload.geotransform, payload.crsCode);
     self.postMessage({ type: "PROGRESS", step: 5, msg: "Delineating subbasins..." });
     const basinIdArray = delineateBasins(payload.width, payload.height, flow.flowDirection, channels.junctionPoints);
     self.postMessage({ type: "PROGRESS", step: 6, msg: "Vectorizing watershed basins..." });

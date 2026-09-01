@@ -821,7 +821,8 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
           setStatus("DEM exceeds the 4096 x 4096 single-band limit.", true);
           return;
         }
-        currentDem = dem; metadata.textContent = `${file.name} | ${dem.width} x ${dem.height} | ${(dem.width * dem.height).toLocaleString()} cells`;
+        currentDem = dem; 
+        metadata.textContent = `${file.name} | ${dem.width} x ${dem.height} | ${(dem.width * dem.height).toLocaleString()} cells`;
         if (_app.addCogLayer) await _app.addCogLayer("Source DEM", URL.createObjectURL(await generateGeoTIFFBlobFromRaster(file)), { colormap: "terrain", nodata: dem.noDataValue });
         updateRunButtonState();
         setStatus("DEM loaded. Ready to run analysis.");
@@ -860,7 +861,50 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
     });
 
     const statsSection = section("Clip & Elevation Statistics"); const basinInput = document.createElement("input"); basinInput.type = "number"; basinInput.min = "1"; basinInput.placeholder = "Basin ID"; const clipButton = document.createElement("button"); clipButton.textContent = "Clip Basin"; const statsGrid = document.createElement("div"); statsGrid.className = "wd-stats-grid"; statsSection.append(label("Target basin ID"), basinInput, clipButton, statsGrid);
-    clipButton.addEventListener("click", () => { if (!currentDem || !currentResult) return; const selected = Number(basinInput.value); const clipped = clipAndComputeStats(currentDem.width, currentDem.height, currentResult.filledElevation, currentResult.basinIdArray, selected, currentDem.noDataValue); statsGrid.textContent = ""; for (const [name, value] of [["Min", clipped.statistics.min], ["Max", clipped.statistics.max], ["Mean", clipped.statistics.mean], ["Std dev", clipped.statistics.stdDev]] as [string, number][]) { const item = document.createElement("div"); item.className = "wd-stat-item"; const itemLabel = document.createElement("span"); itemLabel.className = "wd-stat-label"; itemLabel.textContent = name; const itemValue = document.createElement("span"); itemValue.className = "wd-stat-value"; itemValue.textContent = `${value.toFixed(2)} m`; item.append(itemLabel, itemValue); statsGrid.appendChild(item); } if (_app.addCogLayer) void _app.addCogLayer(`Clipped Basin DEM ${selected}`, URL.createObjectURL(rasterBlob(clipped.clippedElevation, currentDem)), { colormap: "terrain", nodata: currentDem.noDataValue }); });
+    clipButton.addEventListener("click", () => {
+      if (!currentDem || !currentResult) return;
+      const selected = Number(basinInput.value);
+      const clipped = clipAndComputeStats(currentDem.width, currentDem.height, currentResult.filledElevation, currentResult.basinIdArray, selected, currentDem.noDataValue, currentDem.geotransform);
+      statsGrid.textContent = "";
+      const statRows: Array<[string, number, boolean]> = [
+        ["Min", clipped.statistics.min, true],
+        ["Max", clipped.statistics.max, true],
+        ["Mean", clipped.statistics.mean, true],
+        ["Std dev", clipped.statistics.stdDev, true],
+        ["Sum", clipped.statistics.sum, true],
+        ["Valid Cells", clipped.statistics.validCells, false],
+        ["No-data cells", clipped.statistics.noDataCells, false],
+      ];
+      for (const [name, value, isElevation] of statRows) {
+        const item = document.createElement("div");
+        item.className = "wd-stat-item";
+        const itemLabel = document.createElement("span");
+        itemLabel.className = "wd-stat-label";
+        itemLabel.textContent = name;
+        const itemValue = document.createElement("span");
+        itemValue.className = "wd-stat-value";
+        itemValue.textContent = isElevation ? `${value.toFixed(2)} m` : value.toLocaleString();
+        item.append(itemLabel, itemValue);
+        statsGrid.appendChild(item);
+      }
+      if (_app.addCogLayer) {
+        const clippedDem = {
+          ...currentDem,
+          width: clipped.width,
+          height: clipped.height,
+          geotransform: clipped.geotransform,
+          data: clipped.clippedElevation,
+        };
+        const clippedBlob = new Blob([
+          writeFloat32TiledGeoTIFF(clippedDem.width, clippedDem.height, clippedDem.data, clippedDem.geotransform, clippedDem.crsCode, 1)
+        ], { type: "image/tiff" });
+        void _app.addCogLayer(
+          `Clipped Basin DEM ${selected}`,
+          URL.createObjectURL(clippedBlob),
+          { colormap: "terrain", nodata: currentDem.noDataValue }
+        );
+      }
+    });
     const map = _app.getMap?.(); map?.on("click", (event: unknown) => { const feature = (event as { features?: Array<{ properties?: { basinId?: number } }> }).features?.[0]; if (feature?.properties?.basinId) { basinInput.value = String(feature.properties.basinId); clipButton.click(); } });
     styleRightPanelTree(wrapper);
   }
