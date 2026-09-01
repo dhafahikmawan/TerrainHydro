@@ -856,7 +856,7 @@ function loadMethodForm(wrapper: HTMLElement, method : string){
         _app.addGeoJsonLayer("Channel Network", currentResult.channelNetwork); _app.addGeoJsonLayer("Watershed Basins", currentResult.basinPolygons);
         setStatus(`Analysis complete: ${currentResult.basinPolygons.features.length} basins found.`);
         resultActions.textContent = "";
-        if (ENABLE_DOWNLOAD) { const filled = document.createElement("button"); filled.textContent = "Download filled DEM"; filled.onclick = () => download("filled-dem.tif", rasterBlob(currentResult!.filledElevation, currentDem!)); resultActions.appendChild(filled); const network = document.createElement("button"); network.textContent = "Download network GeoJSON"; network.onclick = () => download("network.geojson", new Blob([JSON.stringify(currentResult!.channelNetwork)], { type: "application/geo+json" })); resultActions.appendChild(network); }
+        //if (ENABLE_DOWNLOAD) { const filled = document.createElement("button"); filled.textContent = "Download filled DEM"; filled.onclick = () => download("filled-dem.tif", rasterBlob(currentResult!.filledElevation, currentDem!)); resultActions.appendChild(filled); const network = document.createElement("button"); network.textContent = "Download network GeoJSON"; network.onclick = () => download("network.geojson", new Blob([JSON.stringify(currentResult!.channelNetwork)], { type: "application/geo+json" })); resultActions.appendChild(network); }
       } catch (error) { setStatus(error instanceof Error ? error.message : "Analysis failed.", true); } finally { runButton.disabled = false; }
     });
 
