@@ -59,6 +59,7 @@ export function registerTemplateToolbarMenu<TControl extends GeoLibreControl>(
         type: "submenu",
         id: "tools",
         label: "Tools",
+        // {lang:id} Alat-Alat
         items:submenuItems,
       },
       { type: "separator" },
