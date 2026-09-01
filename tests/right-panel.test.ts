@@ -8,7 +8,7 @@ import {
   RIGHT_PANEL_ID,
   registerTemplateRightPanel,
 } from "../src/lib/geolibre/right-panel";
-import { styleRightPanelTree } from "../src/lib/styles/right-panel-styles";
+import { styleRightPanelTree } from "../src/lib/styles/spazio-right-panel-styles";
 import { writeFloat32TiledGeoTIFF } from "../src/lib/utils/geotiff-processor";
 import { runDelineation } from "../src/lib/tha/watershed-delineation";
 
@@ -73,8 +73,9 @@ describe("registerTemplateRightPanel", () => {
     const methodSelect = root.querySelector("select") as HTMLSelectElement;
     const firstOption = methodSelect.querySelector("option") as HTMLOptionElement;
 
-    expect(root.style.backgroundColor).toBe("rgb(255, 255, 255)");
-    expect(methodSelect).toBeInstanceOf(HTMLSelectElement);
+    expect(root.classList.contains("spazio-container")).toBe(true);
+    expect(methodSelect.classList.contains("spazio-dropdown")).toBe(true);
+    expect(firstOption.classList.contains("spazio-dropdown-options")).toBe(true);
     expect(methodSelect.style.border).not.toBe("");
     expect(firstOption.style.backgroundColor).toBe("rgb(255, 255, 255)");
     expect(firstOption.style.color).toBe("rgb(0, 0, 0)");
@@ -136,7 +137,10 @@ describe("registerTemplateRightPanel", () => {
 
     styleRightPanelTree(root);
 
-    expect(layerList.style.gap).toBe("6px");
+    expect(layerList.classList.contains("spazio-layer-list")).toBe(true);
+    expect(card.classList.contains("spazio-layer-card")).toBe(true);
+    expect(label.classList.contains("spazio-check-label")).toBe(true);
+    expect(subForm.classList.contains("spazio-layer-subform")).toBe(true);
     expect(card.style.border).not.toBe("");
     expect(card.style.backgroundColor).toBe("rgb(249, 250, 251)");
     expect(label.style.color).toBe("rgb(17, 24, 39)");
@@ -200,6 +204,8 @@ describe("registerTemplateRightPanel", () => {
 
     styleRightPanelTree(root);
 
+    expect(slider.classList.contains("spazio-slider")).toBe(true);
+    expect(numberInput.classList.contains("spazio-wd-number-input")).toBe(true);
     expect(slider.style.flex).toBe("1 1 auto");
     expect(numberInput.style.width).toBe("82px");
     expect(numberInput.style.minWidth).toBe("82px");

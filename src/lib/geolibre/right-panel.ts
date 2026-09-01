@@ -7,7 +7,7 @@ import { runNetworkAnalysis } from "../tha/network-analysis";
 import type { LayerConfig } from "../tha/network-analysis";
 import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
 import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../tha/terrain-hydrology";
-import { applyRightPanelStyles, styleRightPanelTree } from "../styles/right-panel-styles";
+import { applyRightPanelStyles, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
