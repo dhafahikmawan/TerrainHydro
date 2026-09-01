@@ -38,6 +38,7 @@ export function reprojectCoords(x: number, y: number, crsCode: number): [number,
 }
 
 function neighbor(index: number, code: number, width: number, height: number): number {
+  if (code === 0) return -1;
   const row = Math.floor(index / width), col = index % width;
   let nextRow = row, nextCol = col;
   if (code === 32 || code === 64 || code === 128) nextRow--;
@@ -101,8 +102,11 @@ export function computeD8AndAccumulation(width: number, height: number, filledDE
   const queue: number[] = [];
   for (let index = 0; index < size; index++) if (!isNoData(filledDEM[index], noDataValue) && incoming[index] === 0) queue.push(index);
   for (let head = 0; head < queue.length; head++) {
-    const current = queue[head], next = neighbor(current, directions[current], width, height);
-    if (next < 0) continue;
+    const current = queue[head];
+    const code = directions[current];
+    if (code === 0) continue;
+    const next = neighbor(current, code, width, height);
+    if (next < 0 || isNoData(filledDEM[next], noDataValue)) continue;
     accumulation[next] += accumulation[current];
     if (--incoming[next] === 0) queue.push(next);
   }
@@ -120,7 +124,9 @@ export function extractChannels(width: number, height: number, flowDirection: Ui
   for (let index = 0; index < size; index++) {
     if (flowAccumulation[index] < effectiveThreshold) continue;
     channel[index] = 1;
-    const next = neighbor(index, flowDirection[index], width, height);
+    const code = flowDirection[index];
+    if (code === 0) continue;
+    const next = neighbor(index, code, width, height);
     if (next >= 0 && flowAccumulation[next] >= effectiveThreshold) { nextCell[index] = next; incoming[next]++; }
   }
   const junctionPoints = [] as FeatureCollection["features"];
