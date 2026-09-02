@@ -15,7 +15,7 @@ import { RIGHT_PANEL_ID, selectMethod, BASE_METHODS} from "./right-panel";
  */
 
 /** Stable id for this plugin's toolbar menu. Replace with your own. */
-export const TOOLBAR_MENU_ID = "spatio-terrain-hydrology-toolbar";
+export const TOOLBAR_MENU_ID = "spazio-terrain-hydrology-toolbar";
 
 /**
  * Register the template's top toolbar menu.

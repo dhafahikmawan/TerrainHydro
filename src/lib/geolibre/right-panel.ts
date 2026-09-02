@@ -1,12 +1,12 @@
 import type { GeoLibreAppAPI, GeoLibreControl } from "./host-api";
 import type { FeatureCollection, GeoJsonProperties, Geometry } from "geojson";
-import { generateNDVI, generateNDWI, generateSlope } from "../tha/raster-analysis";
+import { generateNDVI, generateNDWI, generateSlope } from "../SpazioProcessing/raster-analysis";
 import { generateGeoTIFFBlobFromRaster, getGeoTIFFBandCount, readRasterFromFile, writeFloat32TiledGeoTIFF } from "../utils/geotiff-processor";
-import { clipAndComputeStats, runDelineation, type DemData, type DelineationResult } from "../tha/watershed-delineation";
-import { runNetworkAnalysis } from "../tha/network-analysis";
-import type { LayerConfig } from "../tha/network-analysis";
-import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../tha/terrain-hydrology";
-import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../tha/terrain-hydrology";
+import { clipAndComputeStats, runDelineation, type DemData, type DelineationResult } from "../SpazioProcessing/watershed-delineation";
+import { runNetworkAnalysis } from "../SpazioProcessing/network-analysis";
+import type { LayerConfig } from "../SpazioProcessing/network-analysis";
+import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../SpazioProcessing/terrain-hydrology";
+import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../SpazioProcessing/terrain-hydrology";
 import { applyRightPanelStyle, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
 
 /** Toggle to enable or disable exporting the calculated optimal route */
@@ -42,7 +42,7 @@ export const BASE_METHODS_TC = [
  */
 
 /** Stable id for this plugin's right panel. Replace with your own. */
-export const RIGHT_PANEL_ID = "spatio-terrain-hydrology-panel";
+export const RIGHT_PANEL_ID = "spazio-terrain-hydrology-panel";
 let _app : GeoLibreAppAPI;
 let _method : HTMLSelectElement;
 let _methodForm : HTMLElement;

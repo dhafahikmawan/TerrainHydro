@@ -1,6 +1,6 @@
 {
-  "id": "spatio-tha",
-  "name": "Spatio Terrain and Hydrological Analysis",
+  "id": "spazio-tha",
+  "name": "Spazio Terrain and Hydrological Analysis",
   "version": "0.1.0",
   "entry": "dist/index.js",
   "description": "A starter GeoLibre plugin bundle with a MapLibre control.",

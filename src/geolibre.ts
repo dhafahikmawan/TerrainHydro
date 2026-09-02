@@ -68,9 +68,9 @@ function isPluginState(value: unknown): value is Partial<PluginState> {
   return true;
 }
 
-export const spatioTerrainHydrology: GeoLibrePlugin<PluginControl> = {
-  id: "spatio-tha",
-  name: "Spatio Terrain and Hydrological Analysis",
+export const spazioTerrainHydrology: GeoLibrePlugin<PluginControl> = {
+  id: "spazio-tha",
+  name: "Spazio Terrain and Hydrological Analysis",
   version: "0.1.0",
   urlParameterNames: [PLUGIN_DATA_PARAM],
   activate(app) {
@@ -131,4 +131,4 @@ export const spatioTerrainHydrology: GeoLibrePlugin<PluginControl> = {
   },
 };
 
-export default spatioTerrainHydrology;
+export default spazioTerrainHydrology;

@@ -1,7 +1,7 @@
 ### Fix and Update List 05
 
 ### Update
-1. Update how the plugin is styled, and how the styling is indexed. There is already an existing style registry in `src/lib/styles/spazio-right-panel-styles`. We are going to use that style registry instead, with these class name rules:
+1. Update how the plugin is styled, and how the styling is indexed. There is already an existing style registry in `src/lib/styles/spazio-right-panel-styles.ts`. We are going to use that style registry instead, with these class name rules:
     - For the dropdowns, `spazio-dropdown`.
     - For the dropdown options, `spazio-dropdown-options`.
     - For the calculator expression fields (if any), `spazio-expression-field`.
