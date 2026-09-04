@@ -7,8 +7,7 @@ import { runNetworkAnalysis } from "../SpazioProcessing/network-analysis";
 import type { LayerConfig } from "../SpazioProcessing/network-analysis";
 import { createBufferedLayer, analyzeBufferZone, runAndAnalysisWithIntermediate, runOrAnalysisWithIntermediate } from "../SpazioProcessing/terrain-hydrology";
 import type { BufferUnits, SpatialRelationship, JoinType, LoadedLayer } from "../SpazioProcessing/terrain-hydrology";
-import { applyRightPanelStyle, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
-
+import { applyRightPanelStyle, getRightPanelTheme, setRightPanelTheme, styleRightPanelTree } from "../styles/spazio-right-panel-styles";
 /** Toggle to enable or disable exporting the calculated optimal route */
 const ENABLE_DOWNLOAD = true;
 export const BASE_METHODS = [
@@ -16,14 +15,14 @@ export const BASE_METHODS = [
     "Raster Analysis",
     "Network Analysis",
     "Terrain & Hydrology Analysis",
-    "Watershed Delineation",
+    //"Watershed Delineation",
   ];
 export const BASE_METHODS_TC = [
   "Select Geoprocessing function",  //placeholder
   "Raster Analysis",
   "Network Analysis",
   "Terrain & Hydrology Analysis",
-  "Watershed Delineation",
+  //"Watershed Delineation",
 ]
 
 /**
@@ -1799,6 +1798,12 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
     title: "THA",
     defaultWidth: 320,
     render(container) {
+      // Header bar with heading + theme toggle
+      const headerContainer = document.createElement("div");
+      headerContainer.style.display = "flex";
+      headerContainer.style.alignItems = "center";
+      headerContainer.style.justifyContent = "space-between";
+      headerContainer.style.width = "100%";
       //Wrapper
       const wrap = document.createElement("div");
       applyRightPanelStyle(wrap, "panel")
@@ -1809,6 +1814,27 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
       applyRightPanelStyle(heading, "heading");
       heading.textContent = "Terrain & Hydrological Analysis Workbench";
       // {lang:id} Workbench Analisa Medan & Hidrologi
+      const themeToggle = document.createElement("button");
+      applyRightPanelStyle(themeToggle, "button");
+      themeToggle.type = "button";
+      themeToggle.style.minHeight = "28px";
+      themeToggle.style.padding = "4px 8px";
+      themeToggle.style.fontSize = "12px";
+      themeToggle.style.display = "inline-flex";
+      themeToggle.style.alignItems = "center";
+      themeToggle.style.gap = "4px";
+      themeToggle.textContent = getRightPanelTheme() === "dark" ? "☀️ Light" : "🌙 Dark";
+      themeToggle.setAttribute("aria-label", "Toggle dark/light mode");
+
+      themeToggle.addEventListener("click", () => {
+        const nextTheme = getRightPanelTheme() === "light" ? "dark" : "light";
+        setRightPanelTheme(nextTheme);
+        themeToggle.textContent = nextTheme === "dark" ? "☀️ Light" : "🌙 Dark";
+        styleRightPanelTree(wrap, nextTheme);
+        applyRightPanelStyle(themeToggle, "button", nextTheme);
+      });
+
+      headerContainer.append(heading, themeToggle);
 
       //Method Select
       const method = document.createElement("select");
@@ -1833,7 +1859,7 @@ export function registerTemplateRightPanel<TControl extends GeoLibreControl>(
 
       _methodForm = methodFormContainer;
 
-      wrap.append(heading, body, method, methodFormContainer);
+      wrap.append(headerContainer, body, method, methodFormContainer);
       container.appendChild(wrap);
       styleRightPanelTree(wrap);
 
